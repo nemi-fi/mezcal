@@ -1,6 +1,8 @@
 <script lang="ts">
   import "../app.css";
 
+  import "./polyfills";
+
   import { dev } from "$app/environment";
   import { lib } from "$lib";
   import { Ui } from "@repo/ui";
