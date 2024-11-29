@@ -280,10 +280,12 @@ describe("PoolERC20", () => {
     expect(await btc.balanceOf(pool)).to.eq(amountIn);
   });
 
+  // TODO(security): write these tests
   it.skip("fails to transfer more than balance", async () => {});
   it.skip("fails to transfer if note does not exist", async () => {});
   it.skip("fails to transfer if note is pending", async () => {});
   it.skip("fails to transfer if note is nullified", async () => {});
+  it.skip("fails to double spend a note", async () => {});
 });
 
 async function getCircuit(name: string) {
