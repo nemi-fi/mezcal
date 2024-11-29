@@ -27,6 +27,7 @@ const config: HardhatUserConfig = {
   namedAccounts: {
     deployer: {
       hardhat: 0,
+      localhost: 0,
       baseSepolia: `privatekey://${envConfig.DEPLOYER_PRIVATE_KEY}`,
     },
   },
