@@ -1,0 +1,2 @@
+[workspace]
+members = ["shield", "transfer", "execute", "rollup", "common"]
