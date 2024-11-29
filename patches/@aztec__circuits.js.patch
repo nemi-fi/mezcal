@@ -1,0 +1,32 @@
+diff --git a/dest/scripts/constants.in.js b/dest/scripts/constants.in.js
+index da06d08c0f43701c0a344348d6a17b0276c6a5bc..9a06c0928ee640b9118ae81491666ab22b909876 100644
+--- a/dest/scripts/constants.in.js
++++ b/dest/scripts/constants.in.js
+@@ -1,4 +1,4 @@
+-import * as fs from 'fs';
++// import * as fs from 'fs';
+ import { dirname, join } from 'path';
+ import { fileURLToPath } from 'url';
+ const NOIR_CONSTANTS_FILE = '../../../../noir-projects/noir-protocol-circuits/crates/types/src/constants.nr';
+diff --git a/dest/structs/client_ivc_proof.js b/dest/structs/client_ivc_proof.js
+index 813f31d48efe306df16aeb80f60ab9abb753b6a5..542e8959b08f87ac1d7fb5e787834294b9fcab25 100644
+--- a/dest/structs/client_ivc_proof.js
++++ b/dest/structs/client_ivc_proof.js
+@@ -1,5 +1,5 @@
+ import { BufferReader, serializeToBuffer } from '@aztec/foundation/serialize';
+-import * as fs from 'fs/promises';
++// import * as fs from 'fs/promises';
+ import path from 'path';
+ /**
+  * TODO(https://github.com/AztecProtocol/aztec-packages/issues/7370) refactory this to
+diff --git a/dest/tests/fixtures.js b/dest/tests/fixtures.js
+index e7a75757c63f0efdb31ccd4cff2812c889ac0f37..b07ede2fcd3c59bde218996a2683aeca744264b8 100644
+--- a/dest/tests/fixtures.js
++++ b/dest/tests/fixtures.js
+@@ -1,5 +1,5 @@
+ import { loadContractArtifact } from '@aztec/types/abi';
+-import { readFileSync } from 'fs';
++// import { readFileSync } from 'fs';
+ import { dirname, resolve } from 'path';
+ import { fileURLToPath } from 'url';
+ // Copied from the build output for the contract `Benchmarking` in noir-contracts

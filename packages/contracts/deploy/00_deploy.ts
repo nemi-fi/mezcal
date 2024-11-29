@@ -43,12 +43,17 @@ const deploy: DeployFunction = async ({
       rollupVerifier.address,
     ],
   });
-  await typedDeployments.execute(
-    "RouterERC20",
-    { from: deployer, log: true },
-    "initialize",
-    pool.address,
-  );
+  if (
+    (await typedDeployments.read("RouterERC20", "pool")).toLowerCase() !==
+    pool.address.toLowerCase()
+  ) {
+    await typedDeployments.execute(
+      "RouterERC20",
+      { from: deployer, log: true },
+      "initialize",
+      pool.address,
+    );
+  }
 };
 
 export default deploy;

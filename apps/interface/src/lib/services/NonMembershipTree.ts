@@ -8,13 +8,13 @@ export class NonMembershipTree {
   private constructor(readonly _tree: StandardIndexedTree) {}
 
   static async new(leaves: Fr[], depth: number) {
-    const { newTree, Poseidon, StandardIndexedTreeWithAppend } = (await eval(
-      `import("@aztec/merkle-tree")`,
-    )) as typeof import("@aztec/merkle-tree");
-    const { NullifierLeaf, NullifierLeafPreimage } = (await eval(
-      `import("@aztec/circuits.js")`,
-    )) as typeof import("@aztec/circuits.js");
-    const { AztecLmdbStore } = await eval(`import("@aztec/kv-store/lmdb")`);
+    const { newTree, Poseidon, StandardIndexedTreeWithAppend } = await import(
+      "@aztec/merkle-tree"
+    );
+    const { NullifierLeaf, NullifierLeafPreimage } = await import(
+      "@aztec/circuits.js"
+    );
+    const { AztecLmdbStore } = await import("@aztec/kv-store/lmdb");
     const db = AztecLmdbStore.open();
     class NullifierTree extends StandardIndexedTreeWithAppend {
       constructor(

@@ -1,4 +1,6 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
+import type { EncryptionService } from "@repo/interface/src/lib/services/EncryptionService";
+import type { RollupService } from "@repo/interface/src/lib/services/RollupService";
 import { expect } from "chai";
 import { ethers, noir, typedDeployments } from "hardhat";
 import { parseUnits, snapshottedBeforeEach } from "../shared/utils";
@@ -10,8 +12,7 @@ import {
   PoolERC20,
   PoolERC20__factory,
 } from "../typechain-types";
-import { EncryptionService } from "./EncryptionService";
-import { INCLUDE_UNCOMMITTED, RollupService } from "./RollupService";
+const { tsImport } = require("tsx/esm/api"); // TODO: remove when hardhat supports ESM
 
 describe("PoolERC20", () => {
   let alice: SignerWithAddress,
@@ -44,6 +45,14 @@ describe("PoolERC20", () => {
   });
 
   beforeEach(async () => {
+    const { RollupService, INCLUDE_UNCOMMITTED } = (await tsImport(
+      "@repo/interface/src/lib/services/RollupService",
+      __filename,
+    )) as typeof import("@repo/interface/src/lib/services/RollupService");
+    const { EncryptionService } = await tsImport(
+      "@repo/interface/src/lib/services/EncryptionService",
+      __filename,
+    );
     encryption = new EncryptionService();
     service = new RollupService(
       pool,

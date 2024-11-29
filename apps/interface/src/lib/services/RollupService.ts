@@ -6,15 +6,14 @@ import type {
   StandardTree,
 } from "@aztec/merkle-tree";
 import type { Noir } from "@noir-lang/noir_js";
-import { ethers } from "ethers";
-import { compact, isEqual, orderBy, range, times } from "lodash";
-import { assert } from "ts-essentials";
 import {
   PoolERC20__factory,
-  type IERC20,
   type PoolERC20,
-} from "../typechain-types";
-import type { ExecutionStruct } from "../typechain-types/contracts/PoolERC20";
+} from "@repo/contracts/typechain-types";
+import type { ExecutionStruct } from "@repo/contracts/typechain-types/contracts/PoolERC20";
+import { ethers } from "ethers";
+import { compact, isEqual, orderBy, range, times } from "lodash-es";
+import { assert, type AsyncOrSync } from "ts-essentials";
 import { EncryptionService } from "./EncryptionService";
 import { NonMembershipTree } from "./NonMembershipTree";
 
@@ -45,14 +44,14 @@ export const INCLUDE_UNCOMMITTED = true;
 
 export class RollupService {
   constructor(
-    private contract: PoolERC20,
+    readonly contract: PoolERC20,
     private encryption: EncryptionService,
-    private circuits: {
+    private circuits: AsyncOrSync<{
       shield: NoirAndBackend;
       transfer: NoirAndBackend;
       execute: NoirAndBackend;
       rollup: NoirAndBackend;
-    },
+    }>,
   ) {}
 
   async shield({
@@ -62,28 +61,29 @@ export class RollupService {
     secretKey,
   }: {
     account: ethers.Signer;
-    token: IERC20;
+    token: ethers.AddressLike;
     amount: bigint;
     secretKey: string;
   }) {
-    const { Fr } = await eval(`import("@aztec/aztec.js")`);
+    const { Fr } = await import("@aztec/aztec.js");
     const randomness = Fr.random().toString();
     console.time("shield generateProof");
     const note: ValueNote = {
       owner: await this.computeCompleteWaAddress(secretKey),
-      token: await token.getAddress(),
+      token: await ethers.resolveAddress(token),
       value: amount,
       randomness,
     };
     const noteInput = await this.toNoteInput(note);
-    const { witness } = await this.circuits.shield.noir.execute({
+    const shieldCircuit = (await this.circuits).shield;
+    const { witness } = await shieldCircuit.noir.execute({
       owner: note.owner.address,
       token: note.token,
       value: note.value.toString(),
       randomness: note.randomness,
       note_hash: noteInput.noteHash,
     });
-    const { proof } = await this.circuits.shield.backend.generateProof(witness);
+    const { proof } = await shieldCircuit.backend.generateProof(witness);
     console.timeEnd("shield generateProof");
     const tx = await this.contract
       .connect(account)
@@ -104,7 +104,7 @@ export class RollupService {
     to: CompleteWaAddress;
     amount: bigint;
   }) {
-    const { Fr } = await eval(`import("@aztec/aztec.js")`);
+    const { Fr } = await import("@aztec/aztec.js");
 
     const nullifierTree = await this.getNullifierTree();
     const nullifier = await this.computeNullifier(fromNote, secretKey);
@@ -142,9 +142,9 @@ export class RollupService {
       randomness: to_randomness,
     };
     // console.log("input\n", JSON.stringify(input));
+    const transferCircuit = (await this.circuits).transfer;
     console.time("transfer generateProof");
-    const { witness, returnValue } =
-      await this.circuits.transfer.noir.execute(input);
+    const { witness, returnValue } = await transferCircuit.noir.execute(input);
     {
       const expectedReturnValue = {
         nullifier: nullifier.toString(),
@@ -166,8 +166,7 @@ export class RollupService {
         `invalid transfer return value: ${JSON.stringify(patchedReturnValue)} != ${JSON.stringify(expectedReturnValue)}`,
       );
     }
-    const { proof } =
-      await this.circuits.transfer.backend.generateProof(witness);
+    const { proof } = await transferCircuit.backend.generateProof(witness);
     console.timeEnd("transfer generateProof");
 
     const tx = await this.contract.transfer(
@@ -221,9 +220,7 @@ export class RollupService {
       data: string;
     }[];
   }) {
-    const { Fr } = (await eval(
-      `import("@aztec/aztec.js")`,
-    )) as typeof import("@aztec/aztec.js");
+    const { Fr } = await import("@aztec/aztec.js");
     const emptyTokenAmount = {
       token: ethers.ZeroAddress,
       amount: "0",
@@ -246,7 +243,10 @@ export class RollupService {
     };
     const execution_hash = await keccak256ToFr(
       ethers.AbiCoder.defaultAbiCoder().encode(
-        [PoolERC20__factory.createInterface().getFunction("execute").inputs[1]],
+        [
+          PoolERC20__factory.createInterface().getFunction("execute")
+            .inputs[1]!,
+        ],
         [execution],
       ),
     );
@@ -304,7 +304,7 @@ export class RollupService {
             owner: to,
             token: amount.token,
             value: BigInt(amount.amount),
-            randomness: to_randomness[i],
+            randomness: to_randomness[i]!,
           }),
         ),
       ),
@@ -319,8 +319,8 @@ export class RollupService {
           const changeNote = {
             owner: from,
             token: note.token,
-            value: BigInt(note.value) - BigInt(amounts_out[i].amount),
-            randomness: change_randomness[i],
+            value: BigInt(note.value) - BigInt(amounts_out[i]!.amount),
+            randomness: change_randomness[i]!,
           };
           assert(changeNote.value >= 0n, "change note value must be positive");
           return this.toNoteInput(changeNote);
@@ -360,10 +360,10 @@ export class RollupService {
       change_randomness,
     };
     // console.log("input\n", JSON.stringify(input));
+    const executeCircuit = (await this.circuits).execute;
     console.time("execute generateProof");
-    const { witness } = await this.circuits.execute.noir.execute(input);
-    const { proof } =
-      await this.circuits.execute.backend.generateProof(witness);
+    const { witness } = await executeCircuit.noir.execute(input);
+    const { proof } = await executeCircuit.backend.generateProof(witness);
     console.timeEnd("execute generateProof");
 
     const tx = await this.contract.execute(
@@ -383,9 +383,7 @@ export class RollupService {
     nullifierTree: NonMembershipTree,
     note: ValueNote,
   ) {
-    const { Fr } = (await eval(
-      `import("@aztec/aztec.js")`,
-    )) as typeof import("@aztec/aztec.js");
+    const { Fr } = await import("@aztec/aztec.js");
     const nullifier = await this.computeNullifier(note, secretKey);
     const nullifierNmWitness =
       await nullifierTree.getNonMembershipWitness(nullifier);
@@ -417,7 +415,7 @@ export class RollupService {
   }
 
   async rollup() {
-    const { Fr } = await eval(`import("@aztec/aztec.js")`);
+    const { Fr } = await import("@aztec/aztec.js");
 
     const pending = await this.selectTxsToRollup();
     const pendingNoteHashes = pending.noteHashes.map((h) => new Fr(BigInt(h)));
@@ -444,7 +442,6 @@ export class RollupService {
       "invalid batch insert result low leaf witness data",
     );
 
-    console.time("rollup generateProof");
     const input = {
       new_note_hashes: pendingNoteHashes.map((x: Fr) => x.toString()),
       note_hash_subtree_sibling_path: noteHashTreeInput.subtreeSiblingPath,
@@ -481,9 +478,11 @@ export class RollupService {
       expected_new_nullifier_tree: nullifierTreeInput.newTreeSnapshot,
     };
     // console.log("rollup input\n", JSON.stringify(input));
-    const { witness } = await this.circuits.rollup.noir.execute(input);
+    const rollupCircuit = (await this.circuits).rollup;
+    console.time("rollup generateProof");
+    const { witness } = await rollupCircuit.noir.execute(input);
     const { proof, publicInputs } =
-      await this.circuits.rollup.backend.generateProof(witness);
+      await rollupCircuit.backend.generateProof(witness);
     console.timeEnd("rollup generateProof");
     // {
     //   // debug
@@ -557,7 +556,7 @@ export class RollupService {
   }
 
   async getNoteHashTree() {
-    const { Fr } = await eval(`import("@aztec/aztec.js")`);
+    const { Fr } = await import("@aztec/aztec.js");
     const noteHashes = sortEventsWithIndex(
       await this.contract.queryFilter(this.contract.filters.NoteHashes()),
     ).map((x) => x.noteHashes);
@@ -654,7 +653,7 @@ export class RollupService {
   }
 
   async getNullifierTree() {
-    const { Fr } = await eval(`import("@aztec/aztec.js")`);
+    const { Fr } = await import("@aztec/aztec.js");
 
     const nullifiers = sortEventsWithIndex(
       await this.contract.queryFilter(this.contract.filters.Nullifiers()),
@@ -666,7 +665,7 @@ export class RollupService {
     const initialNullifiers = await Promise.all(
       // sub 1 because the tree has a 0 leaf already
       times(MAX_NULLIFIERS_PER_ROLLUP - 1, (i) =>
-        poseidon2Hash([initialNullifiersSeed, i]),
+        poseidon2Hash([initialNullifiersSeed.toString(), i]),
       ),
     );
     const allNullifiers = initialNullifiers.concat(nullifiers.flat());
@@ -751,20 +750,17 @@ type NoirAndBackend = {
 
 export async function poseidon2Hash(inputs: (bigint | string | number)[]) {
   // I hate hardhat
-  const { poseidon2Hash } = (await eval(
-    `import("@aztec/foundation/crypto")`,
-  )) as typeof import("@aztec/foundation").crypto;
+  const { poseidon2Hash } = await import("@aztec/foundation/crypto");
   return poseidon2Hash(inputs.map((x) => BigInt(x)));
 }
 
 async function createMerkleTree(height: number) {
-  const { StandardTree, newTree, Poseidon } = (await eval(
-    `import("@aztec/merkle-tree")`,
-  )) as typeof import("@aztec/merkle-tree");
-  const { Fr } = (await eval(
-    `import("@aztec/aztec.js")`,
-  )) as typeof import("@aztec/aztec.js");
-  const { AztecLmdbStore } = await eval(`import("@aztec/kv-store/lmdb")`);
+  const { StandardTree, newTree, Poseidon } = await import(
+    "@aztec/merkle-tree"
+  );
+
+  const { Fr } = await import("@aztec/aztec.js");
+  const { AztecLmdbStore } = await import("@aztec/kv-store/lmdb");
   const store = AztecLmdbStore.open();
   const tree: StandardTree<Fr> = await newTree(
     StandardTree,
@@ -819,9 +815,7 @@ async function getSubtreeSiblingPath(noteHashTree: AppendOnlyTree<Fr>) {
 }
 
 async function treeToSnapshot(tree: AppendOnlyTree<Fr>) {
-  const { Fr } = (await eval(
-    `import("@aztec/aztec.js")`,
-  )) as typeof import("@aztec/aztec.js");
+  const { Fr } = await import("@aztec/aztec.js");
   return {
     root: new Fr(tree.getRoot(INCLUDE_UNCOMMITTED)).toString() as string,
     next_available_leaf_index: tree
@@ -861,9 +855,7 @@ export function arrayPadEnd<T>(
 }
 
 export async function keccak256ToFr(value: string) {
-  const { truncateAndPad } = (await eval(
-    `import("@aztec/foundation/serialize")`,
-  )) as typeof import("@aztec/foundation").serialize;
+  const { truncateAndPad } = await import("@aztec/foundation/serialize");
   const hash = ethers.keccak256(value);
   return ethers.hexlify(truncateAndPad(Buffer.from(ethers.getBytes(hash))));
 }
