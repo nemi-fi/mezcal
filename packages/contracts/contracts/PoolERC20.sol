@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Fr, FrLib, keccak256ToFr} from "./Fr.sol";
-import {NoteInput, castAddressToBytes32, TokenAmount, Call, Execution, MAX_TOKENS_IN_PER_EXECUTION, MAX_TOKENS_OUT_PER_EXECUTION, PublicInputs} from "./Utils.sol";
+import {NoteInput, TokenAmount, Call, Execution, MAX_TOKENS_IN_PER_EXECUTION, MAX_TOKENS_OUT_PER_EXECUTION, PublicInputs} from "./Utils.sol";
 import {RouterERC20} from "./RouterERC20.sol";
 import {PoolGeneric} from "./PoolGeneric.sol";
 import {UltraVerifier as ShieldVerifier} from "../noir/target/shield.sol";
@@ -49,19 +49,21 @@ contract PoolERC20 is PoolGeneric {
     ) external {
         token.safeTransferFrom(msg.sender, address(this), amount);
 
-        bytes32[] memory publicInputs = new bytes32[](3);
-        publicInputs[0] = castAddressToBytes32(address(token));
-        publicInputs[1] = bytes32(amount);
-        publicInputs[2] = note.noteHash;
+        PublicInputs.Type memory pi = PublicInputs.create(3);
+        pi.push(address(token));
+        pi.push(amount);
+        pi.push(note.noteHash);
         require(
-            $().shieldVerifier.verify(proof, publicInputs),
+            $().shieldVerifier.verify(proof, pi.finish()),
             "Invalid shield proof"
         );
 
-        NoteInput[] memory noteInputs = new NoteInput[](1);
-        noteInputs[0] = note;
-        bytes32[] memory nullifiers;
-        _PoolGeneric_addPendingTx(noteInputs, nullifiers);
+        {
+            NoteInput[] memory noteInputs = new NoteInput[](1);
+            noteInputs[0] = note;
+            bytes32[] memory nullifiers;
+            _PoolGeneric_addPendingTx(noteInputs, nullifiers);
+        }
     }
 
     function unshield(
@@ -82,9 +84,8 @@ contract PoolERC20 is PoolGeneric {
         // return
         pi.push(nullifier);
         pi.push(changeNote.noteHash);
-        bytes32[] memory publicInputs = pi.finish();
         require(
-            $().unshieldVerifier.verify(proof, publicInputs),
+            $().unshieldVerifier.verify(proof, pi.finish()),
             "Invalid unshield proof"
         );
 
@@ -106,14 +107,14 @@ contract PoolERC20 is PoolGeneric {
         NoteInput calldata changeNote,
         NoteInput calldata toNote
     ) external {
-        bytes32[] memory publicInputs = new bytes32[](5);
-        publicInputs[0] = noteHashTree.root;
-        publicInputs[1] = nullifierTree.root;
-        publicInputs[2] = nullifier;
-        publicInputs[3] = changeNote.noteHash;
-        publicInputs[4] = toNote.noteHash;
+        PublicInputs.Type memory pi = PublicInputs.create(5);
+        pi.push(noteHashTree.root);
+        pi.push(nullifierTree.root);
+        pi.push(nullifier);
+        pi.push(changeNote.noteHash);
+        pi.push(toNote.noteHash);
         require(
-            $().transferVerifier.verify(proof, publicInputs),
+            $().transferVerifier.verify(proof, pi.finish()),
             "Invalid transfer proof"
         );
 
@@ -138,7 +139,7 @@ contract PoolERC20 is PoolGeneric {
         require(execution.calls.length > 0, "No calls");
         Fr executionHash = keccak256ToFr(abi.encode(execution));
 
-        bytes32[] memory publicInputs = new bytes32[](
+        PublicInputs.Type memory pi = PublicInputs.create(
             // tree roots
             2 +
                 // execution hashes
@@ -154,42 +155,36 @@ contract PoolERC20 is PoolGeneric {
                 // nullifiers out
                 MAX_TOKENS_OUT_PER_EXECUTION
         );
-        uint256 p = 0;
         // trees
-        publicInputs[p++] = noteHashTree.root;
-        publicInputs[p++] = nullifierTree.root;
+        pi.push(noteHashTree.root);
+        pi.push(nullifierTree.root);
         // execution
-        publicInputs[p++] = executionHash.toBytes32();
-        publicInputs[p++] = wrappedExecutionHash;
+        pi.push(executionHash.toBytes32());
+        pi.push(wrappedExecutionHash);
         // amounts in
         for (uint256 i = 0; i < execution.amountsIn.length; i++) {
-            publicInputs[p++] = castAddressToBytes32(
-                address(execution.amountsIn[i].token)
-            );
-            publicInputs[p++] = bytes32(execution.amountsIn[i].amount);
+            pi.push(address(execution.amountsIn[i].token));
+            pi.push(bytes32(execution.amountsIn[i].amount));
         }
         // amounts out
         for (uint256 i = 0; i < execution.amountsOut.length; i++) {
-            publicInputs[p++] = castAddressToBytes32(
-                address(execution.amountsOut[i].token)
-            );
-            publicInputs[p++] = bytes32(execution.amountsOut[i].amount);
+            pi.push(address(execution.amountsOut[i].token));
+            pi.push(bytes32(execution.amountsOut[i].amount));
         }
         // note hashes in
         for (uint256 i = 0; i < noteInputs.length; i++) {
-            publicInputs[p++] = noteInputs[i].noteHash;
+            pi.push(noteInputs[i].noteHash);
         }
         // change note hashes out
         for (uint256 i = 0; i < changeNoteInputs.length; i++) {
-            publicInputs[p++] = changeNoteInputs[i].noteHash;
+            pi.push(changeNoteInputs[i].noteHash);
         }
         // nullifiers out
         for (uint256 i = 0; i < nullifiers.length; i++) {
-            publicInputs[p++] = nullifiers[i];
+            pi.push(nullifiers[i]);
         }
-        require(p == publicInputs.length, "Invalid execute public inputs");
         require(
-            $().executeVerifier.verify(proof, publicInputs),
+            $().executeVerifier.verify(proof, pi.finish()),
             "Invalid execute proof"
         );
 

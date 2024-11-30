@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 import {HeaderLib} from "@aztec/l1-contracts/src/core/libraries/HeaderLib.sol";
 import {Fr, FrLib} from "./Fr.sol";
-import {NoteInput} from "./Utils.sol";
+import {NoteInput, PublicInputs} from "./Utils.sol";
 import {UltraVerifier as RollupVerifier} from "../noir/target/rollup.sol";
 
 // Note: keep in sync with other languages
@@ -26,6 +26,7 @@ struct PendingTx {
 
 contract PoolGeneric {
     using FrLib for Fr;
+    using PublicInputs for PublicInputs.Type;
 
     error TxAlreadyRolledUp(uint256 txIndex);
 
@@ -92,38 +93,28 @@ contract PoolGeneric {
             }
         }
 
-        bytes32[] memory publicInputs = new bytes32[](
+        PublicInputs.Type memory pi = PublicInputs.create(
             (MAX_NOTES_PER_ROLLUP + 4) + (MAX_NULLIFIERS_PER_ROLLUP + 4)
         );
-        uint256 p = 0;
         // note hashes
         for (uint256 i = 0; i < pendingNoteHashes.length; i++) {
-            publicInputs[p++] = pendingNoteHashes[i].toBytes32();
+            pi.push(pendingNoteHashes[i].toBytes32());
         }
-        publicInputs[p++] = noteHashTree.root;
-        publicInputs[p++] = bytes32(
-            uint256(noteHashTree.nextAvailableLeafIndex)
-        );
-        publicInputs[p++] = newNoteHashTree.root;
-        publicInputs[p++] = bytes32(
-            uint256(newNoteHashTree.nextAvailableLeafIndex)
-        );
+        pi.push(noteHashTree.root);
+        pi.push(uint256(noteHashTree.nextAvailableLeafIndex));
+        pi.push(newNoteHashTree.root);
+        pi.push(uint256(newNoteHashTree.nextAvailableLeafIndex));
 
         // nullifiers
         for (uint256 i = 0; i < pendingNullifiers.length; i++) {
-            publicInputs[p++] = pendingNullifiers[i].toBytes32();
+            pi.push(pendingNullifiers[i].toBytes32());
         }
-        publicInputs[p++] = nullifierTree.root;
-        publicInputs[p++] = bytes32(
-            uint256(nullifierTree.nextAvailableLeafIndex)
-        );
-        publicInputs[p++] = newNullifierTree.root;
-        publicInputs[p++] = bytes32(
-            uint256(newNullifierTree.nextAvailableLeafIndex)
-        );
-        require(p == publicInputs.length, "Invalid public inputs");
+        pi.push(nullifierTree.root);
+        pi.push(uint256(nullifierTree.nextAvailableLeafIndex));
+        pi.push(newNullifierTree.root);
+        pi.push(uint256(newNullifierTree.nextAvailableLeafIndex));
         require(
-            rollupVerifier.verify(proof, publicInputs),
+            rollupVerifier.verify(proof, pi.finish()),
             "Invalid rollup proof"
         );
 
