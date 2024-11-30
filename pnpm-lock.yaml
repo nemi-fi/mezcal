@@ -293,6 +293,9 @@ importers:
       '@metamask/jazzicon':
         specifier: ^2.0.0
         version: 2.0.0
+      '@repo/utils':
+        specifier: workspace:*
+        version: link:../utils
       formsnap:
         specifier: ^1.0.1
         version: 1.0.1(svelte@5.0.5)(sveltekit-superforms@2.19.1(@sveltejs/kit@2.7.2(@sveltejs/vite-plugin-svelte@3.1.2(svelte@5.0.5)(vite@5.4.8(@types/node@22.7.5)))(svelte@5.0.5)(vite@5.4.8(@types/node@22.7.5)))(@types/json-schema@7.0.15)(svelte@5.0.5))
@@ -375,6 +378,12 @@ importers:
 
   packages/utils:
     dependencies:
+      '@uniswap/sdk-core':
+        specifier: ^6.0.0
+        version: 6.0.0
+      ethers:
+        specifier: ^6.13.4
+        version: 6.13.4
       ms:
         specifier: ^2.1.3
         version: 2.1.3
@@ -384,6 +393,9 @@ importers:
       ufo:
         specifier: ^1.5.4
         version: 1.5.4
+      zod:
+        specifier: ^3.23.8
+        version: 3.23.8
     devDependencies:
       '@types/ms':
         specifier: ^0.7.34

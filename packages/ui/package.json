@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "@metamask/jazzicon": "^2.0.0",
+    "@repo/utils": "workspace:*",
     "formsnap": "^1.0.1",
     "lodash-es": "^4.17.21",
     "lucide-svelte": "^0.441.0",
