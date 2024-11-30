@@ -310,13 +310,6 @@ contract PoolERC20 {
         publicInputs[p++] = bytes32(
             uint256(newNullifierTree.nextAvailableLeafIndex)
         );
-        // {
-        //     // debug
-        //     console.log("publicInputs solidity", publicInputs.length);
-        //     for (uint256 i = 0; i < publicInputs.length; i++) {
-        //         console.logBytes32(publicInputs[i]);
-        //     }
-        // }
         require(p == publicInputs.length, "Invalid public inputs");
         require(
             rollupVerifier.verify(proof, publicInputs),
