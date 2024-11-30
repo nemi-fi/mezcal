@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { utils } from "@repo/utils";
   import type { ComponentProps } from "svelte";
   import { Input } from "../ui/input";
 
@@ -10,5 +9,5 @@
   {...props}
   bind:value
   inputmode="decimal"
-  pattern={utils.DECIMAL_INPUT_REGEX}
+  pattern="^[0-9]*[.,]?[0-9]*$"
 />
