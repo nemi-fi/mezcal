@@ -10,6 +10,7 @@ export { Button } from "./ui/button";
 export * as Card from "./ui/card";
 export { Input } from "./ui/input";
 export * as ScrollArea from "./ui/scroll-area";
+export * as Select from "./ui/select";
 export * as Sheet from "./ui/sheet";
 export { Textarea } from "./ui/textarea";
 export { default as UserAvatar } from "./UserAvatar.svelte";
