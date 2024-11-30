@@ -721,12 +721,12 @@ async function deserializeValueNote(
   const fieldsStr = fields.map((x) => ethers.toBeArray(x));
   return {
     owner: {
-      address: ethers.zeroPadValue(fieldsStr[0], 32),
+      address: ethers.zeroPadValue(fieldsStr[0]!, 32),
       publicKey,
     },
-    token: ethers.zeroPadValue(fieldsStr[1], 20),
-    value: fields[2],
-    randomness: ethers.zeroPadValue(fieldsStr[3], 32),
+    token: ethers.zeroPadValue(fieldsStr[1]!, 20),
+    value: fields[2]!,
+    randomness: ethers.zeroPadValue(fieldsStr[3]!, 32),
   };
 }
 
@@ -773,12 +773,12 @@ async function createMerkleTree(height: number) {
   return tree;
 }
 
-async function getInsertTreeInput(
-  tree: AppendOnlyTree<Fr> | StandardIndexedTree,
-  newLeaves: Fr[],
+async function getInsertTreeInput<T extends Fr | Buffer>(
+  tree: AppendOnlyTree<T> | StandardIndexedTree,
+  newLeaves: T[],
 ) {
-  const subtreeSiblingPath = await getSubtreeSiblingPath(tree);
-  const treeSnapshot = await treeToSnapshot(tree);
+  const subtreeSiblingPath = await getSubtreeSiblingPath(tree as any);
+  const treeSnapshot = await treeToSnapshot(tree as any);
 
   let batchInsertResult:
     | Awaited<ReturnType<StandardIndexedTree["batchInsert"]>>
@@ -787,11 +787,11 @@ async function getInsertTreeInput(
     const subtreeHeight = Math.log2(newLeaves.length);
     assert(Number.isInteger(subtreeHeight), "subtree height must be integer");
     // console.log("batch inserting", newLeaves);
-    batchInsertResult = await tree.batchInsert(newLeaves, subtreeHeight);
+    batchInsertResult = await tree.batchInsert(newLeaves as any, subtreeHeight);
   } else {
     await tree.appendLeaves(newLeaves);
   }
-  const newTreeSnapshot = await treeToSnapshot(tree);
+  const newTreeSnapshot = await treeToSnapshot(tree as any);
   await tree.rollback();
 
   return {
