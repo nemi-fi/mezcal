@@ -4,6 +4,7 @@ import { PoolERC20__factory } from "@repo/contracts/typechain-types/index.js";
 import { QueryClient } from "@tanstack/svelte-query";
 import { Token } from "@uniswap/sdk-core";
 import { ethers } from "ethers";
+import { ReownService } from "./reown.js";
 import { EncryptionService } from "./services/EncryptionService.js";
 import { QueriesService } from "./services/QueriesService.svelte.js";
 import { RollupService } from "./services/RollupService.js";
@@ -59,6 +60,8 @@ const rollup = new RollupService(
     rollup: getCircuit(import("@repo/contracts/noir/target/rollup.json")),
   }),
 );
+const reown = new ReownService(contract);
+
 export const lib = {
   queries,
   rollup,
@@ -66,4 +69,5 @@ export const lib = {
   relayer,
   tokens,
   provider,
+  reown,
 };
