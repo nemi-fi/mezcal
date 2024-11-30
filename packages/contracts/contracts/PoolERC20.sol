@@ -4,10 +4,11 @@ pragma solidity ^0.8.23;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Fr, FrLib, keccak256ToFr} from "./Fr.sol";
-import {NoteInput, castAddressToBytes32, TokenAmount, Call, Execution, MAX_TOKENS_IN_PER_EXECUTION, MAX_TOKENS_OUT_PER_EXECUTION} from "./Utils.sol";
+import {NoteInput, castAddressToBytes32, TokenAmount, Call, Execution, MAX_TOKENS_IN_PER_EXECUTION, MAX_TOKENS_OUT_PER_EXECUTION, PublicInputs} from "./Utils.sol";
 import {RouterERC20} from "./RouterERC20.sol";
 import {PoolGeneric} from "./PoolGeneric.sol";
 import {UltraVerifier as ShieldVerifier} from "../noir/target/shield.sol";
+import {UltraVerifier as UnshieldVerifier} from "../noir/target/unshield.sol";
 import {UltraVerifier as TransferVerifier} from "../noir/target/transfer.sol";
 import {UltraVerifier as ExecuteVerifier} from "../noir/target/execute.sol";
 import {UltraVerifier as RollupVerifier} from "../noir/target/rollup.sol";
@@ -15,10 +16,12 @@ import {UltraVerifier as RollupVerifier} from "../noir/target/rollup.sol";
 contract PoolERC20 is PoolGeneric {
     using SafeERC20 for IERC20;
     using FrLib for Fr;
+    using PublicInputs for PublicInputs.Type;
 
     struct Storage {
         RouterERC20 router;
         ShieldVerifier shieldVerifier;
+        UnshieldVerifier unshieldVerifier;
         TransferVerifier transferVerifier;
         ExecuteVerifier executeVerifier;
     }
@@ -26,12 +29,14 @@ contract PoolERC20 is PoolGeneric {
     constructor(
         RouterERC20 router,
         ShieldVerifier shieldVerifier,
+        UnshieldVerifier unshieldVerifier,
         TransferVerifier transferVerifier,
         ExecuteVerifier executeVerifier,
         RollupVerifier rollupVerifier
     ) PoolGeneric(rollupVerifier) {
         $().router = router;
         $().shieldVerifier = shieldVerifier;
+        $().unshieldVerifier = unshieldVerifier;
         $().transferVerifier = transferVerifier;
         $().executeVerifier = executeVerifier;
     }
@@ -57,6 +62,42 @@ contract PoolERC20 is PoolGeneric {
         noteInputs[0] = note;
         bytes32[] memory nullifiers;
         _PoolGeneric_addPendingTx(noteInputs, nullifiers);
+    }
+
+    function unshield(
+        bytes calldata proof,
+        IERC20 token,
+        address to,
+        uint256 amount,
+        bytes32 nullifier,
+        NoteInput calldata changeNote
+    ) external {
+        PublicInputs.Type memory pi = PublicInputs.create(7);
+        // params
+        pi.push(noteHashTree.root);
+        pi.push(nullifierTree.root);
+        pi.push(address(token));
+        pi.push(to);
+        pi.push(amount);
+        // return
+        pi.push(nullifier);
+        pi.push(changeNote.noteHash);
+        bytes32[] memory publicInputs = pi.finish();
+        require(
+            $().unshieldVerifier.verify(proof, publicInputs),
+            "Invalid unshield proof"
+        );
+
+        {
+            NoteInput[] memory noteInputs = new NoteInput[](1);
+            noteInputs[0] = changeNote;
+            bytes32[] memory nullifiers = new bytes32[](1);
+            nullifiers[0] = nullifier;
+            _PoolGeneric_addPendingTx(noteInputs, nullifiers);
+        }
+
+        // effects
+        token.safeTransfer(to, amount);
     }
 
     function transfer(

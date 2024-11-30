@@ -36,3 +36,41 @@ struct Execution {
     // // TODO: use an auction for the fee amount
     // TokenAmount fee;
 }
+
+library PublicInputs {
+    struct Type {
+        bytes32[] publicInputs;
+        uint256 index;
+    }
+
+    function create(uint256 len) internal pure returns (Type memory) {
+        Type memory publicInputs;
+        publicInputs.publicInputs = new bytes32[](len);
+        return publicInputs;
+    }
+
+    function push(Type memory publicInputs, bytes32 value) internal pure {
+        publicInputs.publicInputs[publicInputs.index] = value;
+        unchecked {
+            publicInputs.index++;
+        }
+    }
+
+    function push(Type memory publicInputs, uint256 value) internal pure {
+        push(publicInputs, bytes32(value));
+    }
+
+    function push(Type memory publicInputs, address value) internal pure {
+        push(publicInputs, castAddressToBytes32(value));
+    }
+
+    function finish(
+        Type memory publicInputs
+    ) internal pure returns (bytes32[] memory) {
+        require(
+            publicInputs.index == publicInputs.publicInputs.length,
+            "Did not fill all public inputs"
+        );
+        return publicInputs.publicInputs;
+    }
+}

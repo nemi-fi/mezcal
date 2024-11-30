@@ -59,6 +59,7 @@ describe("PoolERC20", () => {
       encryption,
       await ethers.resolveProperties({
         shield: getCircuit("shield"),
+        unshield: getCircuit("unshield"),
         transfer: getCircuit("transfer"),
         execute: getCircuit("execute"),
         rollup: getCircuit("rollup"),
@@ -115,6 +116,37 @@ describe("PoolERC20", () => {
     });
     await service.rollup();
     expect(await service.balanceOf(usdc, aliceSecretKey)).to.equal(600n);
+  });
+
+  it("unshield", async () => {
+    const amount = 100n;
+    const unshieldAmount = 40n;
+    await service.shield({
+      account: alice,
+      token: usdc,
+      amount,
+      secretKey: aliceSecretKey,
+    });
+    await service.rollup();
+    expect(await service.balanceOf(usdc, aliceSecretKey)).to.equal(amount);
+
+    const [fromNote] = await service.getBalanceNotesOf(usdc, aliceSecretKey);
+    await service.unshield({
+      secretKey: aliceSecretKey,
+      fromNote,
+      token: await usdc.getAddress(),
+      to: await bob.getAddress(),
+      amount: unshieldAmount,
+    });
+
+    expect(await usdc.balanceOf(bob)).to.eq(unshieldAmount);
+    expect(await usdc.balanceOf(pool)).to.equal(amount - unshieldAmount);
+
+    await service.rollup();
+
+    expect(await service.balanceOf(usdc, aliceSecretKey)).to.equal(
+      amount - unshieldAmount,
+    );
   });
 
   it("transfers", async () => {
@@ -278,6 +310,7 @@ describe("PoolERC20", () => {
   it.skip("fails to transfer if note is pending", async () => {});
   it.skip("fails to transfer if note is nullified", async () => {});
   it.skip("fails to double spend a note", async () => {});
+  it.skip("fails to unshield too much", async () => {});
 
   it("does not have notes until it's rolled up", async () => {
     const { note } = await service.shield({

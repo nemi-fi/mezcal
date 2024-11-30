@@ -1,2 +1,2 @@
 [workspace]
-members = ["shield", "transfer", "execute", "rollup", "common"]
+members = ["shield", "unshield", "transfer", "execute", "rollup", "common"]

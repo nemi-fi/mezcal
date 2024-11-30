@@ -56,6 +56,7 @@ export class RollupService {
     private encryption: EncryptionService,
     private circuits: AsyncOrSync<{
       shield: NoirAndBackend;
+      unshield: NoirAndBackend;
       transfer: NoirAndBackend;
       execute: NoirAndBackend;
       rollup: NoirAndBackend;
@@ -101,6 +102,67 @@ export class RollupService {
     return { tx, note };
   }
 
+  async unshield({
+    secretKey,
+    fromNote,
+    token,
+    to,
+    amount,
+  }: {
+    secretKey: string;
+    fromNote: ValueNote;
+    token: string;
+    to: string;
+    amount: bigint;
+  }) {
+    const { Fr } = await import("@aztec/aztec.js");
+
+    assert(utils.isAddressEqual(token, fromNote.token), "invalid token");
+    const change_randomness = Fr.random().toString();
+    const changeNote: ValueNote = {
+      token: fromNote.token,
+      owner: fromNote.owner,
+      value: fromNote.value - amount,
+      randomness: change_randomness,
+    };
+    assert(changeNote.value >= 0n, "invalid change note");
+
+    const noteHashTree = await this.getNoteHashTree();
+    const nullifierTree = await this.getNullifierTree();
+    const nullifier = await this.computeNullifier(fromNote, secretKey);
+
+    const unshieldCircuit = (await this.circuits).unshield;
+    console.time("unshield generateProof");
+    const { witness } = await unshieldCircuit.noir.execute({
+      note_hash_tree_root: ethers.hexlify(
+        noteHashTree.getRoot(INCLUDE_UNCOMMITTED),
+      ),
+      nullifier_tree_root: nullifierTree.getRoot(),
+      from_secret_key: secretKey,
+      from_note_inputs: await this.toNoteConsumptionInputs(secretKey, fromNote),
+      token,
+      to,
+      amount: amount.toString(),
+      change_randomness,
+      // return
+      nullifier: nullifier.toString(),
+      change_note_hash: await this.hashNote(changeNote),
+    });
+    const { proof } = await unshieldCircuit.backend.generateProof(witness);
+    console.timeEnd("unshield generateProof");
+    const tx = await this.contract.unshield(
+      proof,
+      token,
+      to,
+      amount,
+      nullifier.toString(),
+      await this.toNoteInput(changeNote),
+    );
+    const receipt = await tx.wait();
+    console.log("unshield gas used", receipt?.gasUsed);
+    return { tx, note: fromNote };
+  }
+
   async transfer({
     secretKey,
     fromNote,
@@ -125,11 +187,7 @@ export class RollupService {
         noteHashTree.getRoot(INCLUDE_UNCOMMITTED),
       ),
       nullifier_tree_root: nullifierTree.getRoot(),
-      from_note_inputs: await this.toNoteConsumptionInputs(
-        secretKey,
-        nullifierTree,
-        fromNote,
-      ),
+      from_note_inputs: await this.toNoteConsumptionInputs(secretKey, fromNote),
       from_secret_key: secretKey,
       to: to.address,
       amount: amount.toString(),
@@ -283,7 +341,7 @@ export class RollupService {
     const notes_out_consumption_inputs = arrayPadEnd(
       await Promise.all(
         notesOutNotPadded.map((note) =>
-          this.toNoteConsumptionInputs(fromSecretKey, nullifierTree, note),
+          this.toNoteConsumptionInputs(fromSecretKey, note),
         ),
       ),
       MAX_TOKENS_OUT_PER_EXECUTION,
@@ -392,13 +450,10 @@ export class RollupService {
     console.log("execute gas used", receipt?.gasUsed);
   }
 
-  async toNoteConsumptionInputs(
-    secretKey: string,
-    nullifierTree: NonMembershipTree,
-    note: ValueNote,
-  ) {
+  async toNoteConsumptionInputs(secretKey: string, note: ValueNote) {
     const { Fr } = await import("@aztec/aztec.js");
     const nullifier = await this.computeNullifier(note, secretKey);
+    const nullifierTree = await this.getNullifierTree();
     const nullifierNmWitness =
       await nullifierTree.getNonMembershipWitness(nullifier);
 
