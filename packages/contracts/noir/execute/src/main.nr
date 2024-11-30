@@ -30,16 +30,12 @@ fn main(
     );
 
     // check amounts out and emit change note hashes & nullifiers
-    for i in 0..amounts_out.len() {
-        if amounts_out[i].amount != 0 {
-            assert_eq(notes_out[i].note.token, amounts_out[i].token, f"invalid token at {i}");
-            assert(notes_out[i].note.value >= amounts_out[i].amount, f"invalid amount at {i}");
-        }
-    }
     let (change_note_hashes, nullifiers_out) = {
         let change_and_nullifiers_out = notes_out.enumerate().map(
             |(i, note_input): (u32, common::NoteConsumptionInputs)| {
+                let amount_out = amounts_out[i];
                 if (note_input.note.is_set()) {
+                    assert_eq(note_input.note.token, amount_out.token, f"invalid token at {i}");
                     let nullifier = common::consume_owned_note(
                         note_hash_tree_root,
                         nullifier_tree_root,
@@ -49,11 +45,12 @@ fn main(
                     let change_note = common::ValueNote {
                         owner: note_input.note.owner,
                         token: note_input.note.token,
-                        value: note_input.note.value - amounts_out[i].amount,
+                        value: note_input.note.value - amount_out.amount,
                         randomness: change_randomness[note_input.note_index],
                     };
                     (change_note.hash(), nullifier)
                 } else {
+                    assert_eq(amount_out.amount, 0, f"invalid amount at {i}");
                     (0, 0)
                 }
             },
