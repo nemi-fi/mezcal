@@ -107,3 +107,7 @@ export const CurrencyAmountInputSchema = z
   });
 
 export { assert, UnreachableCaseError } from "ts-essentials";
+
+export function iife<T>(fn: () => T): T {
+  return fn();
+}

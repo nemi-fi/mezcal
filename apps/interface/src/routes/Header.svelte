@@ -1,7 +1,9 @@
 <script lang="ts">
   import { page } from "$app/stores";
+  import { lib } from "$lib";
   import { route } from "$lib/ROUTES";
   import { Ui } from "@repo/ui";
+  import { utils } from "@repo/utils";
   import Menu from "lucide-svelte/icons/menu";
 
   function isActive(href: string) {
@@ -42,6 +44,13 @@
     class="flex w-full items-center gap-4 md:ml-auto md:w-auto md:gap-2 lg:gap-4"
   >
     <div class="grow"></div>
+    {#if lib.evm.address}
+      {utils.shortAddress(lib.evm.address)}
+    {:else}
+      <Ui.LoadingButton onclick={() => lib.evm.connect()}>
+        Connect
+      </Ui.LoadingButton>
+    {/if}
   </div>
 </header>
 

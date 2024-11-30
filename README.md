@@ -11,6 +11,7 @@
 - [ ] use bignumber for amounts
 - [ ] support ETH
 - [ ] fees
+- [ ] get the remained of tokens from router to relayer/treasury
 
 ### Backend
 

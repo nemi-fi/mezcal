@@ -248,15 +248,17 @@ export class RollupService {
       amountsIn: amounts_in as ExecutionStruct["amountsIn"],
       amountsOut: amounts_out as ExecutionStruct["amountsOut"],
     };
-    const execution_hash = await keccak256ToFr(
-      ethers.AbiCoder.defaultAbiCoder().encode(
-        [
-          PoolERC20__factory.createInterface().getFunction("execute")
-            .inputs[1]!,
-        ],
-        [execution],
-      ),
-    );
+    const execution_hash = (
+      await keccak256ToFr(
+        ethers.AbiCoder.defaultAbiCoder().encode(
+          [
+            PoolERC20__factory.createInterface().getFunction("execute")
+              .inputs[1]!,
+          ],
+          [execution],
+        ),
+      )
+    ).toString();
     const execution_secret = Fr.random().toString();
     const wrapped_execution_hash = (
       await poseidon2Hash([execution_hash, execution_secret])
@@ -880,8 +882,9 @@ export function arrayPadEnd<T>(
   return newArray;
 }
 
-export async function keccak256ToFr(value: string) {
+export async function keccak256ToFr(value: string): Promise<Fr> {
+  const { Fr } = await import("@aztec/aztec.js");
   const { truncateAndPad } = await import("@aztec/foundation/serialize");
   const hash = ethers.keccak256(value);
-  return ethers.hexlify(truncateAndPad(Buffer.from(ethers.getBytes(hash))));
+  return Fr.fromBuffer(truncateAndPad(Buffer.from(ethers.getBytes(hash))));
 }

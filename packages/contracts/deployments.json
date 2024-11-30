@@ -1,15 +1,15 @@
 {
-  "8453": {
-    "chainId": "8453",
+  "31337": {
+    "chainId": "31337",
     "contracts": {
-      "ExecuteVerifier": "0x325c8Df4CFb5B068675AFF8f62aA668D1dEc3C4B",
-      "MockBTC": "0xBEe6FFc1E8627F51CcDF0b4399a1e1abc5165f15",
-      "MockUSDC": "0x8E45C0936fa1a65bDaD3222bEFeC6a03C83372cE",
-      "PoolERC20": "0x627b9A657eac8c3463AD17009a424dFE3FDbd0b1",
-      "RollupVerifier": "0x4eaB29997D332A666c3C366217Ab177cF9A7C436",
-      "RouterERC20": "0x5Ffe31E4676D3466268e28a75E51d1eFa4298620",
-      "ShieldVerifier": "0xa4E00CB342B36eC9fDc4B50b3d527c3643D4C49e",
-      "TransferVerifier": "0x8ac5eE52F70AE01dB914bE459D8B3d50126fd6aE"
+      "ExecuteVerifier": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+      "MockBTC": "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
+      "MockUSDC": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
+      "PoolERC20": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
+      "RollupVerifier": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+      "RouterERC20": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+      "ShieldVerifier": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      "TransferVerifier": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
     },
     "name": "localhost"
   }

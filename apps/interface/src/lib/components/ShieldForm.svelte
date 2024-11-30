@@ -4,17 +4,8 @@
   import { IERC20__factory } from "@repo/contracts/typechain-types";
   import { Ui } from "@repo/ui";
   import { utils } from "@repo/utils";
-  import type { ethers } from "ethers";
   import { z } from "zod";
   import CurrencySelect from "./CurrencySelect.svelte";
-
-  let {
-    account,
-    secretKey,
-  }: {
-    account: ethers.Signer;
-    secretKey: string;
-  } = $props();
 
   const schema = z.object({
     token: z.string(),
@@ -22,11 +13,14 @@
   });
 
   async function onsubmit(formData: z.infer<typeof schema>) {
+    const account = await lib.evm.getSigner();
+    utils.assertConnected(account);
     const token = lib.tokens.find((t) =>
       utils.isAddressEqual(t.address, formData.token),
     );
     utils.assert(token, `token not found: ${formData.token}`);
     const amount = utils.parseCurrencyAmount(token, formData.amount);
+    console.log("acc", await account.getAddress());
     const tokenContract = IERC20__factory.connect(token.address, account);
     await (
       await tokenContract.approve(
@@ -34,11 +28,12 @@
         amount.quotient.toString(),
       )
     ).wait();
+    console.log("approved");
     await lib.rollup.shield({
       account,
       token: token.address,
       amount: BigInt(amount.quotient.toString()),
-      secretKey,
+      secretKey: await lib.evm.getSecretKey(account),
     });
     await requestRollup();
     lib.queries.invalidateAll();

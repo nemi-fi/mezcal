@@ -9,41 +9,58 @@
   import { utils } from "@repo/utils";
   import { createQuery } from "@tanstack/svelte-query";
   import { CurrencyAmount, Token } from "@uniswap/sdk-core";
-  import { ethers } from "ethers";
 
-  const privateKey =
-    "0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6";
-  const account = new ethers.Wallet(privateKey, lib.provider);
-
-  const balances = createQuery({
-    queryKey: ["balances", lib.tokens],
-    queryFn: async () => {
-      const balances = await Promise.all(
-        lib.tokens.map(async (token) => {
-          const tokenContract = IERC20__factory.connect(
-            token.address,
-            lib.provider,
+  const balances = $derived(
+    createQuery(
+      {
+        queryKey: ["balances", lib.tokens, lib.evm.address],
+        queryFn: async () => {
+          const address = lib.evm.address;
+          if (!address) {
+            return [];
+          }
+          const balances = await Promise.all(
+            lib.tokens.map(async (token) => {
+              const tokenContract = IERC20__factory.connect(
+                token.address,
+                lib.evm.provider,
+              );
+              const balance = await tokenContract.balanceOf(address);
+              return CurrencyAmount.fromRawAmount(token, balance.toString());
+            }),
           );
-          const balance = await tokenContract.balanceOf(account);
-          return CurrencyAmount.fromRawAmount(token, balance.toString());
-        }),
-      );
-      return balances;
-    },
-  });
+          return balances;
+        },
+      },
+      lib.queries.queryClient,
+    ),
+  );
 
-  const shieldedBalances = createQuery({
-    queryKey: ["shieldedBalances", lib.tokens],
-    queryFn: async () => {
-      const balances = await Promise.all(
-        lib.tokens.map(async (token) => {
-          const balance = await lib.rollup.balanceOf(token.address, privateKey);
-          return CurrencyAmount.fromRawAmount(token, balance.toString());
-        }),
-      );
-      return balances;
-    },
-  });
+  const shieldedBalances = $derived(
+    createQuery(
+      {
+        queryKey: ["shieldedBalances", lib.tokens, lib.evm.address],
+        queryFn: async () => {
+          const signer = await lib.evm.getSigner();
+          if (!signer) {
+            return [];
+          }
+          const secretKey = await lib.evm.getSecretKey(signer);
+          const balances = await Promise.all(
+            lib.tokens.map(async (token) => {
+              const balance = await lib.rollup.balanceOf(
+                token.address,
+                secretKey,
+              );
+              return CurrencyAmount.fromRawAmount(token, balance.toString());
+            }),
+          );
+          return balances;
+        },
+      },
+      lib.queries.queryClient,
+    ),
+  );
 </script>
 
 <Ui.GapContainer class="container">
@@ -66,22 +83,28 @@
 
       <Ui.LoadingButton
         onclick={async () => {
+          utils.assertConnected(lib.evm.address);
           for (const token of lib.tokens) {
             const contract = MockERC20__factory.connect(
               token.address,
               lib.relayer,
             );
-            // const tx = await contract.mintForTests(account.address, 10000000n);
-
-            const whaleAddress = "0x40ebc1ac8d4fedd2e144b75fe9c0420be82750c6";
-            await lib.provider.send("anvil_impersonateAccount", [whaleAddress]);
-            const whale = await lib.provider.getSigner(whaleAddress);
-            const tx = await contract
-              .connect(whale)
-              .transfer(
-                account.address,
-                utils.parseCurrencyAmount(token, "10").quotient.toString(),
-              );
+            let tx;
+            if (lib.chainId === 31337) {
+              tx = await contract.mintForTests(lib.evm.address, 10000000n);
+            } else {
+              const whaleAddress = "0x40ebc1ac8d4fedd2e144b75fe9c0420be82750c6";
+              await lib.evm.provider.send("anvil_impersonateAccount", [
+                whaleAddress,
+              ]);
+              const whale = await lib.evm.provider.getSigner(whaleAddress);
+              tx = await contract
+                .connect(whale)
+                .transfer(
+                  lib.evm.address,
+                  utils.parseCurrencyAmount(token, "10").quotient.toString(),
+                );
+            }
 
             await tx.wait();
             lib.queries.invalidateAll();
@@ -105,7 +128,7 @@
         {/snippet}
       </Ui.Query>
 
-      <ShieldForm secretKey={privateKey} {account} token={lib.tokens[0]} />
+      <ShieldForm />
     </Ui.Card.Content>
   </Ui.Card.Root>
 </Ui.GapContainer>

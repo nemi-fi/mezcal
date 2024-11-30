@@ -6,6 +6,7 @@ import { Token } from "@uniswap/sdk-core";
 import { ethers } from "ethers";
 import { ReownService } from "./reown.js";
 import { EncryptionService } from "./services/EncryptionService.js";
+import { EvmAccountService } from "./services/EvmAccountService.svelte.js";
 import { QueriesService } from "./services/QueriesService.svelte.js";
 import { RollupService } from "./services/RollupService.js";
 
@@ -19,19 +20,20 @@ const queryClient = new QueryClient({
 
 const queries = new QueriesService(queryClient);
 
+// TODO: remove this provider
 const provider = new ethers.JsonRpcProvider("http://localhost:8545");
 
-// const chainId = 31337;
-// const tokens = [
-//   new Token(chainId, deployments[chainId].contracts.MockUSDC, 6, "USDC"),
-//   new Token(chainId, deployments[chainId].contracts.MockBTC, 8, "BTC"),
-// ] as const;
-
-const chainId = 8453;
+const chainId = 31337;
 const tokens = [
-  new Token(chainId, "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", 6, "USDC"),
-  new Token(chainId, "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf", 8, "BTC"),
+  new Token(chainId, deployments[chainId].contracts.MockUSDC, 6, "USDC"),
+  new Token(chainId, deployments[chainId].contracts.MockBTC, 8, "BTC"),
 ] as const;
+
+// const chainId = 8453;
+// const tokens = [
+//   new Token(chainId, "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", 6, "USDC"),
+//   new Token(chainId, "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf", 8, "BTC"),
+// ] as const;
 
 const encryption = new EncryptionService();
 async function getCircuit(artifact: any) {
@@ -61,6 +63,7 @@ const rollup = new RollupService(
   }),
 );
 const reown = new ReownService(contract);
+const evm = new EvmAccountService();
 
 export const lib = {
   queries,
@@ -70,4 +73,5 @@ export const lib = {
   tokens,
   provider,
   reown,
+  evm,
 };
