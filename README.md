@@ -5,7 +5,7 @@
 ### contracts and circuits
 
 - [x] split contract into a generic rollup and ERC20 specific
-  - [ ] extract PoolGeneric storage into a struct
+  - [x] extract PoolGeneric storage into a struct
 - [x] join ValueNotes
 - [ ] negative tests
 - [ ] use bignumber for amounts

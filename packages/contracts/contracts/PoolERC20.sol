@@ -22,7 +22,7 @@ contract PoolERC20 is PoolGeneric {
     using FrLib for Fr;
     using PublicInputs for PublicInputs.Type;
 
-    struct Storage {
+    struct PoolERC20Storage {
         RouterERC20 router;
         ShieldVerifier shieldVerifier;
         UnshieldVerifier unshieldVerifier;
@@ -40,12 +40,12 @@ contract PoolERC20 is PoolGeneric {
         ExecuteVerifier executeVerifier,
         RollupVerifier rollupVerifier
     ) PoolGeneric(rollupVerifier) {
-        $().router = router;
-        $().shieldVerifier = shieldVerifier;
-        $().unshieldVerifier = unshieldVerifier;
-        $().joinVerifier = joinVerifier;
-        $().transferVerifier = transferVerifier;
-        $().executeVerifier = executeVerifier;
+        _poolErc20Storage().router = router;
+        _poolErc20Storage().shieldVerifier = shieldVerifier;
+        _poolErc20Storage().unshieldVerifier = unshieldVerifier;
+        _poolErc20Storage().joinVerifier = joinVerifier;
+        _poolErc20Storage().transferVerifier = transferVerifier;
+        _poolErc20Storage().executeVerifier = executeVerifier;
     }
 
     function shield(
@@ -61,7 +61,7 @@ contract PoolERC20 is PoolGeneric {
         pi.push(amount);
         pi.push(note.noteHash);
         require(
-            $().shieldVerifier.verify(proof, pi.finish()),
+            _poolErc20Storage().shieldVerifier.verify(proof, pi.finish()),
             "Invalid shield proof"
         );
 
@@ -83,8 +83,8 @@ contract PoolERC20 is PoolGeneric {
     ) external {
         PublicInputs.Type memory pi = PublicInputs.create(7);
         // params
-        pi.push(noteHashTree.root);
-        pi.push(nullifierTree.root);
+        pi.push(getNoteHashTree().root);
+        pi.push(getNullifierTree().root);
         pi.push(address(token));
         pi.push(to);
         pi.push(amount);
@@ -92,7 +92,7 @@ contract PoolERC20 is PoolGeneric {
         pi.push(nullifier);
         pi.push(changeNote.noteHash);
         require(
-            $().unshieldVerifier.verify(proof, pi.finish()),
+            _poolErc20Storage().unshieldVerifier.verify(proof, pi.finish()),
             "Invalid unshield proof"
         );
 
@@ -116,14 +116,14 @@ contract PoolERC20 is PoolGeneric {
         PublicInputs.Type memory pi = PublicInputs.create(
             2 + MAX_NOTES_TO_JOIN + 1
         );
-        pi.push(noteHashTree.root);
-        pi.push(nullifierTree.root);
+        pi.push(getNoteHashTree().root);
+        pi.push(getNullifierTree().root);
         for (uint256 i = 0; i < MAX_NOTES_TO_JOIN; i++) {
             pi.push(nullifiers[i]);
         }
         pi.push(joinNote.noteHash);
         require(
-            $().joinVerifier.verify(proof, pi.finish()),
+            _poolErc20Storage().joinVerifier.verify(proof, pi.finish()),
             "Invalid join proof"
         );
 
@@ -145,13 +145,13 @@ contract PoolERC20 is PoolGeneric {
         NoteInput calldata toNote
     ) external {
         PublicInputs.Type memory pi = PublicInputs.create(5);
-        pi.push(noteHashTree.root);
-        pi.push(nullifierTree.root);
+        pi.push(getNoteHashTree().root);
+        pi.push(getNullifierTree().root);
         pi.push(nullifier);
         pi.push(changeNote.noteHash);
         pi.push(toNote.noteHash);
         require(
-            $().transferVerifier.verify(proof, pi.finish()),
+            _poolErc20Storage().transferVerifier.verify(proof, pi.finish()),
             "Invalid transfer proof"
         );
 
@@ -193,8 +193,8 @@ contract PoolERC20 is PoolGeneric {
                 MAX_TOKENS_OUT_PER_EXECUTION
         );
         // trees
-        pi.push(noteHashTree.root);
-        pi.push(nullifierTree.root);
+        pi.push(getNoteHashTree().root);
+        pi.push(getNullifierTree().root);
         // execution
         pi.push(executionHash.toBytes32());
         pi.push(wrappedExecutionHash);
@@ -221,13 +221,13 @@ contract PoolERC20 is PoolGeneric {
             pi.push(nullifiers[i]);
         }
         require(
-            $().executeVerifier.verify(proof, pi.finish()),
+            _poolErc20Storage().executeVerifier.verify(proof, pi.finish()),
             "Invalid execute proof"
         );
 
         {
             // execute
-            RouterERC20 router_ = $().router; // gas savings
+            RouterERC20 router_ = _poolErc20Storage().router; // gas savings
             for (uint256 i = 0; i < execution.amountsOut.length; i++) {
                 TokenAmount memory tokenAmount = execution.amountsOut[i];
                 if (tokenAmount.amount > 0) {
@@ -276,10 +276,14 @@ contract PoolERC20 is PoolGeneric {
     }
 
     function routerErc20() external view returns (RouterERC20) {
-        return $().router;
+        return _poolErc20Storage().router;
     }
 
-    function $() private pure returns (Storage storage s) {
+    function _poolErc20Storage()
+        private
+        pure
+        returns (PoolERC20Storage storage s)
+    {
         assembly {
             s.slot := STORAGE_SLOT
         }
