@@ -202,6 +202,10 @@ contract PoolERC20 is PoolGeneric {
         }
     }
 
+    function routerErc20() external view returns (RouterERC20) {
+        return $().router;
+    }
+
     function $() private pure returns (Storage storage s) {
         assembly {
             s.slot := STORAGE_SLOT
