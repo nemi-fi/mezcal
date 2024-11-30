@@ -61,6 +61,25 @@
       lib.queries.queryClient,
     ),
   );
+
+  const waAddress = $derived(
+    createQuery(
+      {
+        queryKey: ["waAddress", lib.evm.address],
+        queryFn: async () => {
+          const signer = await lib.evm.getSigner();
+          if (!signer) {
+            return null;
+          }
+          const secretKey = await lib.evm.getSecretKey(signer);
+          return (
+            await lib.rollup.computeCompleteWaAddress(secretKey)
+          ).toString();
+        },
+      },
+      lib.queries.queryClient,
+    ),
+  );
 </script>
 
 <Ui.GapContainer class="container">
@@ -75,6 +94,15 @@
       <Ui.Card.Title>Balances</Ui.Card.Title>
     </Ui.Card.Header>
     <Ui.Card.Content>
+      <div>
+        Private address:
+        <Ui.Query query={$waAddress}>
+          {#snippet success(data)}
+            {data}
+          {/snippet}
+        </Ui.Query>
+      </div>
+
       <Ui.Query query={$balances}>
         {#snippet success(data)}
           {@render balancesBlock(data)}

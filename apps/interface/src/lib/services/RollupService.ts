@@ -11,6 +11,7 @@ import {
   type PoolERC20,
 } from "@repo/contracts/typechain-types";
 import type { ExecutionStruct } from "@repo/contracts/typechain-types/contracts/PoolERC20";
+import { utils } from "@repo/utils";
 import { ethers } from "ethers";
 import { compact, isEqual, orderBy, range, times } from "lodash-es";
 import { assert, type AsyncOrSync } from "ts-essentials";
@@ -195,12 +196,16 @@ export class RollupService {
   }
 
   async balanceOf(token: ethers.AddressLike, secretKey: string) {
+    const notes = await this.getBalanceNotesOf(token, secretKey);
+    return notes.reduce((acc, note) => acc + note.value, 0n);
+  }
+
+  async getBalanceNotesOf(token: ethers.AddressLike, secretKey: string) {
     token = await ethers.resolveAddress(token);
     const notes = await this.getEmittedNotes(secretKey);
-    const sum = notes
-      .filter((note) => note.token.toLowerCase() === token.toLowerCase())
-      .reduce((acc, note) => acc + note.value, 0n);
-    return sum;
+    return notes.filter(
+      (note) => note.token.toLowerCase() === token.toLowerCase(),
+    );
   }
 
   async execute({
@@ -700,24 +705,42 @@ export class RollupService {
     ]);
   }
 
+  // TODO: move to `CompleteWaAddress` class
   async computeCompleteWaAddress(secretKey: string) {
     const address = (
       await poseidon2Hash([GENERATOR_INDEX__WA_ADDRESS, secretKey])
     ).toString();
     const publicKey = await this.encryption.derivePublicKey(secretKey);
-    return { address, publicKey };
+    return new CompleteWaAddress(address, publicKey);
   }
 }
 
-export interface CompleteWaAddress {
-  publicKey: string;
-  address: string;
-}
 export interface ValueNote {
   owner: CompleteWaAddress;
   token: string;
   value: bigint;
   randomness: string;
+}
+
+export type WaAddress = string;
+
+export class CompleteWaAddress {
+  constructor(
+    readonly address: WaAddress,
+    readonly publicKey: string,
+  ) {}
+
+  toString() {
+    return ethers.concat([this.address, this.publicKey]);
+  }
+
+  static fromString(str: string) {
+    const bytes = ethers.getBytes(str);
+    utils.assert(bytes.length === 64, "invalid complete address");
+    const address = ethers.dataSlice(bytes, 0, 32);
+    const publicKey = ethers.dataSlice(bytes, 32, 64);
+    return new CompleteWaAddress(address, publicKey);
+  }
 }
 
 // TODO: refactor ValueNote into a class (or codegen from Noir if possible)
