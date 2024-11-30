@@ -1,4 +1,4 @@
-use common::{WaAddress, EthAddress};
+use common::{EthAddress, WaAddress};
 
 fn main(
     owner: WaAddress,

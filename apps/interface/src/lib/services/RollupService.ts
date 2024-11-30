@@ -48,6 +48,9 @@ const NOTE_HASH_OR_NULLIFIER_STATE_PENDING = 1n;
 // Note: keep in sync with other languages
 const NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP = 2n;
 
+// Note: keep in sync with other languages
+const MAX_NOTES_TO_JOIN = 2;
+
 export const INCLUDE_UNCOMMITTED = true;
 
 export class RollupService {
@@ -57,6 +60,7 @@ export class RollupService {
     private circuits: AsyncOrSync<{
       shield: NoirAndBackend;
       unshield: NoirAndBackend;
+      join: NoirAndBackend;
       transfer: NoirAndBackend;
       execute: NoirAndBackend;
       rollup: NoirAndBackend;
@@ -161,6 +165,50 @@ export class RollupService {
     const receipt = await tx.wait();
     console.log("unshield gas used", receipt?.gasUsed);
     return { tx, note: fromNote };
+  }
+
+  async join({ secretKey, notes }: { secretKey: string; notes: ValueNote[] }) {
+    const { Fr } = await import("@aztec/aztec.js");
+    assert(notes.length === MAX_NOTES_TO_JOIN, "invalid notes length");
+
+    const join_randomness = Fr.random().toString();
+
+    const joinCircuit = (await this.circuits).join;
+    console.time("join generateProof");
+    const { witness } = await joinCircuit.noir.execute({
+      note_hash_tree_root: ethers.hexlify(
+        (await this.getNoteHashTree()).getRoot(INCLUDE_UNCOMMITTED),
+      ),
+      nullifier_tree_root: ethers.hexlify(
+        (await this.getNullifierTree()).getRoot(),
+      ),
+      from_secret_key: secretKey,
+      join_randomness,
+      notes: await Promise.all(
+        notes.map((note) => this.toNoteConsumptionInputs(secretKey, note)),
+      ),
+    });
+    const { proof } = await joinCircuit.backend.generateProof(witness);
+    console.timeEnd("join generateProof");
+
+    const joinNote: ValueNote = {
+      owner: await this.computeCompleteWaAddress(secretKey),
+      token: notes[0]!.token,
+      value: notes.reduce((acc, note) => acc + note.value, 0n),
+      randomness: join_randomness,
+    };
+
+    const tx = await this.contract.join(
+      proof,
+      (await Promise.all(
+        notes.map(async (note) =>
+          (await this.computeNullifier(note, secretKey)).toString(),
+        ),
+      )) as any,
+      await this.toNoteInput(joinNote),
+    );
+    const receipt = await tx.wait(0);
+    console.log("join gas used", receipt?.gasUsed);
   }
 
   async transfer({

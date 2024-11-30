@@ -11,7 +11,7 @@ pub struct ValueNote {
 impl ValueNote {
     // TODO: move to OwnedNote?
     pub fn is_set(self) -> bool {
-        self.owner != 0
+        (self.owner != 0) & (self.token != 0)
     }
 }
 

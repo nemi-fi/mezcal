@@ -5,3 +5,11 @@ import { route } from "./ROUTES";
 export function requestRollup() {
   return ky.post(route("POST /api/rollup"));
 }
+
+export function printPublicInputs(publicInputs: string[]) {
+  console.log("publicInputs js", publicInputs.length);
+  for (const publicInput of publicInputs) {
+    console.log(publicInput);
+  }
+  console.log();
+}

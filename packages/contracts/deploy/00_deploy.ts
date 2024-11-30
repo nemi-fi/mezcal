@@ -24,6 +24,7 @@ const deploy: DeployFunction = async ({
   }
   const shieldVerifier = await deployVerifier("ShieldVerifier", "shield");
   const unshieldVerifier = await deployVerifier("UnshieldVerifier", "unshield");
+  const joinVerifier = await deployVerifier("JoinVerifier", "join");
   const transferVerifier = await deployVerifier("TransferVerifier", "transfer");
   const executeVerifier = await deployVerifier("ExecuteVerifier", "execute");
   const rollupVerifier = await deployVerifier("RollupVerifier", "rollup");
@@ -40,6 +41,7 @@ const deploy: DeployFunction = async ({
       router.address,
       shieldVerifier.address,
       unshieldVerifier.address,
+      joinVerifier.address,
       transferVerifier.address,
       executeVerifier.address,
       rollupVerifier.address,

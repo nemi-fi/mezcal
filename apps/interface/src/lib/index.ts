@@ -57,6 +57,8 @@ const rollup = new RollupService(
   encryption,
   ethers.resolveProperties({
     shield: getCircuit(import("@repo/contracts/noir/target/shield.json")),
+    unshield: getCircuit(import("@repo/contracts/noir/target/unshield.json")),
+    join: getCircuit(import("@repo/contracts/noir/target/join.json")),
     execute: getCircuit(import("@repo/contracts/noir/target/execute.json")),
     transfer: getCircuit(import("@repo/contracts/noir/target/transfer.json")),
     rollup: getCircuit(import("@repo/contracts/noir/target/rollup.json")),

@@ -9,9 +9,13 @@ import {RouterERC20} from "./RouterERC20.sol";
 import {PoolGeneric} from "./PoolGeneric.sol";
 import {UltraVerifier as ShieldVerifier} from "../noir/target/shield.sol";
 import {UltraVerifier as UnshieldVerifier} from "../noir/target/unshield.sol";
+import {UltraVerifier as JoinVerifier} from "../noir/target/join.sol";
 import {UltraVerifier as TransferVerifier} from "../noir/target/transfer.sol";
 import {UltraVerifier as ExecuteVerifier} from "../noir/target/execute.sol";
 import {UltraVerifier as RollupVerifier} from "../noir/target/rollup.sol";
+
+// Note: keep in sync with other languages
+uint32 constant MAX_NOTES_TO_JOIN = 2;
 
 contract PoolERC20 is PoolGeneric {
     using SafeERC20 for IERC20;
@@ -22,6 +26,7 @@ contract PoolERC20 is PoolGeneric {
         RouterERC20 router;
         ShieldVerifier shieldVerifier;
         UnshieldVerifier unshieldVerifier;
+        JoinVerifier joinVerifier;
         TransferVerifier transferVerifier;
         ExecuteVerifier executeVerifier;
     }
@@ -30,6 +35,7 @@ contract PoolERC20 is PoolGeneric {
         RouterERC20 router,
         ShieldVerifier shieldVerifier,
         UnshieldVerifier unshieldVerifier,
+        JoinVerifier joinVerifier,
         TransferVerifier transferVerifier,
         ExecuteVerifier executeVerifier,
         RollupVerifier rollupVerifier
@@ -37,6 +43,7 @@ contract PoolERC20 is PoolGeneric {
         $().router = router;
         $().shieldVerifier = shieldVerifier;
         $().unshieldVerifier = unshieldVerifier;
+        $().joinVerifier = joinVerifier;
         $().transferVerifier = transferVerifier;
         $().executeVerifier = executeVerifier;
     }
@@ -99,6 +106,36 @@ contract PoolERC20 is PoolGeneric {
 
         // effects
         token.safeTransfer(to, amount);
+    }
+
+    function join(
+        bytes calldata proof,
+        bytes32[MAX_NOTES_TO_JOIN] calldata nullifiers,
+        NoteInput calldata joinNote
+    ) external {
+        PublicInputs.Type memory pi = PublicInputs.create(
+            2 + MAX_NOTES_TO_JOIN + 1
+        );
+        pi.push(noteHashTree.root);
+        pi.push(nullifierTree.root);
+        for (uint256 i = 0; i < MAX_NOTES_TO_JOIN; i++) {
+            pi.push(nullifiers[i]);
+        }
+        pi.push(joinNote.noteHash);
+        require(
+            $().joinVerifier.verify(proof, pi.finish()),
+            "Invalid join proof"
+        );
+
+        {
+            NoteInput[] memory noteInputs = new NoteInput[](1);
+            noteInputs[0] = joinNote;
+            bytes32[] memory nullifiersDyn = new bytes32[](nullifiers.length);
+            for (uint256 i = 0; i < nullifiers.length; i++) {
+                nullifiersDyn[i] = nullifiers[i];
+            }
+            _PoolGeneric_addPendingTx(noteInputs, nullifiersDyn);
+        }
     }
 
     function transfer(

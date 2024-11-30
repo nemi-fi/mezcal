@@ -60,6 +60,7 @@ describe("PoolERC20", () => {
       await ethers.resolveProperties({
         shield: getCircuit("shield"),
         unshield: getCircuit("unshield"),
+        join: getCircuit("join"),
         transfer: getCircuit("transfer"),
         execute: getCircuit("execute"),
         rollup: getCircuit("rollup"),
@@ -147,6 +148,42 @@ describe("PoolERC20", () => {
     expect(await service.balanceOf(usdc, aliceSecretKey)).to.equal(
       amount - unshieldAmount,
     );
+  });
+
+  it("joins", async () => {
+    const amount0 = 100n;
+    const amount1 = 200n;
+    await service.shield({
+      account: alice,
+      token: usdc,
+      amount: amount0,
+      secretKey: aliceSecretKey,
+    });
+    await service.shield({
+      account: alice,
+      token: usdc,
+      amount: amount1,
+      secretKey: aliceSecretKey,
+    });
+    await service.rollup();
+    expect(await service.balanceOf(usdc, aliceSecretKey)).to.equal(
+      amount0 + amount1,
+    ); // sanity check
+
+    const notes = await service.getBalanceNotesOf(usdc, aliceSecretKey);
+    expect(notes.length).to.equal(2); // sanity check
+    await service.join({
+      secretKey: aliceSecretKey,
+      notes,
+    });
+    await service.rollup();
+
+    expect(await service.balanceOf(usdc, aliceSecretKey)).to.equal(
+      amount0 + amount1,
+    );
+    expect(
+      (await service.getBalanceNotesOf(usdc, aliceSecretKey)).length,
+    ).to.equal(1);
   });
 
   it("transfers", async () => {
