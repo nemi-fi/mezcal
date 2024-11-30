@@ -12,6 +12,11 @@ function castAddressToBytes32(address x) pure returns (bytes32) {
     return bytes32(uint256(uint160(address(x))));
 }
 
+struct NoteInput {
+    bytes32 noteHash;
+    bytes encryptedNote;
+}
+
 struct Call {
     address to;
     bytes data;

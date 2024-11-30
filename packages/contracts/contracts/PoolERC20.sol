@@ -1,99 +1,39 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity ^0.8.23;
 
-import {HeaderLib} from "@aztec/l1-contracts/src/core/libraries/HeaderLib.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Fr, FrLib, keccak256ToFr} from "./Fr.sol";
-import {castAddressToBytes32, TokenAmount, Call, Execution, MAX_TOKENS_IN_PER_EXECUTION, MAX_TOKENS_OUT_PER_EXECUTION} from "./Utils.sol";
+import {NoteInput, castAddressToBytes32, TokenAmount, Call, Execution, MAX_TOKENS_IN_PER_EXECUTION, MAX_TOKENS_OUT_PER_EXECUTION} from "./Utils.sol";
 import {RouterERC20} from "./RouterERC20.sol";
+import {PoolGeneric} from "./PoolGeneric.sol";
 import {UltraVerifier as ShieldVerifier} from "../noir/target/shield.sol";
-import {UltraVerifier as RollupVerifier} from "../noir/target/rollup.sol";
 import {UltraVerifier as TransferVerifier} from "../noir/target/transfer.sol";
 import {UltraVerifier as ExecuteVerifier} from "../noir/target/execute.sol";
+import {UltraVerifier as RollupVerifier} from "../noir/target/rollup.sol";
 
-// Note: keep in sync with other languages
-uint32 constant MAX_NOTES_PER_ROLLUP = 64;
-// Note: keep in sync with other languages
-uint32 constant MAX_NULLIFIERS_PER_ROLLUP = 64;
-
-// Note: keep in sync with other languages
-uint256 constant NOTE_HASH_OR_NULLIFIER_STATE_NOT_EXISTS = 0;
-// Note: keep in sync with other languages
-uint256 constant NOTE_HASH_OR_NULLIFIER_STATE_PENDING = 1;
-// Note: keep in sync with other languages
-uint256 constant NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP = 2;
-
-struct PendingTx {
-    bool rolledUp;
-    Fr[] noteHashes;
-    Fr[] nullifiers;
-}
-
-struct NoteInput {
-    bytes32 noteHash;
-    bytes encryptedNote;
-}
-
-// TODO: break this contract into a general rollup (note, nullifiers, pending txs) and ERC20 specific methods (shield, transfer)
-contract PoolERC20 {
+contract PoolERC20 is PoolGeneric {
     using SafeERC20 for IERC20;
     using FrLib for Fr;
 
-    error TxAlreadyRolledUp(uint256 txIndex);
-
-    ShieldVerifier public immutable shieldVerifier;
-    TransferVerifier public immutable transferVerifier;
-    ExecuteVerifier public immutable executeVerifier;
-    RollupVerifier public immutable rollupVerifier;
-
-    RouterERC20 public router;
-
-    PendingTx[] allPendingTxs;
-
-    // TODO(perf): emit only the ciphertext
-    event EncryptedNotes(NoteInput[] encryptedNotes);
-
-    // TODO(perf): use dynamic array to save on gas costs
-    event NoteHashes(
-        uint256 indexed index,
-        Fr[MAX_NOTES_PER_ROLLUP] noteHashes
-    );
-    error NoteHashExists(Fr noteHash);
-    mapping(Fr => uint256) public noteHashState; // TODO: nuke this
-    HeaderLib.AppendOnlyTreeSnapshot noteHashTree;
-    uint256 noteHashBatchIndex;
-
-    // TODO(perf): use dynamic array to save on gas costs
-    event Nullifiers(
-        uint256 indexed index,
-        Fr[MAX_NULLIFIERS_PER_ROLLUP] nullifiers
-    );
-    error NullifierExists(Fr nullifier);
-    mapping(Fr => uint256) public nullifierState; // TODO: nuke this
-    HeaderLib.AppendOnlyTreeSnapshot nullifierTree;
-    uint256 nullifierBatchIndex;
+    struct Storage {
+        RouterERC20 router;
+        ShieldVerifier shieldVerifier;
+        TransferVerifier transferVerifier;
+        ExecuteVerifier executeVerifier;
+    }
 
     constructor(
-        RouterERC20 router_,
-        ShieldVerifier shieldVerifier_,
-        TransferVerifier transferVerifier_,
-        ExecuteVerifier executeVerifier_,
-        RollupVerifier rollupVerifier_
-    ) {
-        router = router_;
-
-        shieldVerifier = shieldVerifier_;
-        transferVerifier = transferVerifier_;
-        executeVerifier = executeVerifier_;
-        rollupVerifier = rollupVerifier_;
-
-        noteHashTree
-            .root = 0x1fd848aa69e1633722fe249a5b7f53b094f1c9cef9f5c694b073fd1cc5850dfb; // empty tree
-        nullifierTree
-            .root = 0x0aa63c509390ad66ecd821998aabb16a818bcc5db5cf4accc0ce1821745244e9; // nullifier tree filled with 1 canonical subtree of nullifiers
-        nullifierTree.nextAvailableLeafIndex = MAX_NULLIFIERS_PER_ROLLUP;
+        RouterERC20 router,
+        ShieldVerifier shieldVerifier,
+        TransferVerifier transferVerifier,
+        ExecuteVerifier executeVerifier,
+        RollupVerifier rollupVerifier
+    ) PoolGeneric(rollupVerifier) {
+        $().router = router;
+        $().shieldVerifier = shieldVerifier;
+        $().transferVerifier = transferVerifier;
+        $().executeVerifier = executeVerifier;
     }
 
     function shield(
@@ -109,14 +49,14 @@ contract PoolERC20 {
         publicInputs[1] = bytes32(amount);
         publicInputs[2] = note.noteHash;
         require(
-            shieldVerifier.verify(proof, publicInputs),
+            $().shieldVerifier.verify(proof, publicInputs),
             "Invalid shield proof"
         );
 
         NoteInput[] memory noteInputs = new NoteInput[](1);
         noteInputs[0] = note;
         bytes32[] memory nullifiers;
-        _addPendingTx(noteInputs, nullifiers);
+        _PoolGeneric_addPendingTx(noteInputs, nullifiers);
     }
 
     function transfer(
@@ -132,7 +72,7 @@ contract PoolERC20 {
         publicInputs[3] = changeNote.noteHash;
         publicInputs[4] = toNote.noteHash;
         require(
-            transferVerifier.verify(proof, publicInputs),
+            $().transferVerifier.verify(proof, publicInputs),
             "Invalid transfer proof"
         );
 
@@ -142,7 +82,7 @@ contract PoolERC20 {
             noteInputs[1] = toNote;
             bytes32[] memory nullifiers = new bytes32[](1);
             nullifiers[0] = nullifier;
-            _addPendingTx(noteInputs, nullifiers);
+            _PoolGeneric_addPendingTx(noteInputs, nullifiers);
         }
     }
 
@@ -208,13 +148,13 @@ contract PoolERC20 {
         }
         require(p == publicInputs.length, "Invalid execute public inputs");
         require(
-            executeVerifier.verify(proof, publicInputs),
+            $().executeVerifier.verify(proof, publicInputs),
             "Invalid execute proof"
         );
 
         {
             // execute
-            RouterERC20 router_ = router; // gas savings
+            RouterERC20 router_ = $().router; // gas savings
             for (uint256 i = 0; i < execution.amountsOut.length; i++) {
                 TokenAmount memory tokenAmount = execution.amountsOut[i];
                 if (tokenAmount.amount > 0) {
@@ -258,157 +198,16 @@ contract PoolERC20 {
                 // shrink to actual length
                 mstore(nullifiersDyn, nullifiersI)
             }
-            _addPendingTx(noteInputsDyn, nullifiersDyn);
+            _PoolGeneric_addPendingTx(noteInputsDyn, nullifiersDyn);
         }
     }
 
-    function rollup(
-        bytes calldata proof,
-        uint256[] calldata txIndices,
-        HeaderLib.AppendOnlyTreeSnapshot calldata newNoteHashTree,
-        HeaderLib.AppendOnlyTreeSnapshot calldata newNullifierTree
-    ) external {
-        Fr[MAX_NOTES_PER_ROLLUP] memory pendingNoteHashes;
-        Fr[MAX_NULLIFIERS_PER_ROLLUP] memory pendingNullifiers;
-        {
-            uint256 noteHashesIdx = 0;
-            uint256 nullifiersIdx = 0;
-            for (uint256 i = 0; i < txIndices.length; i++) {
-                PendingTx memory pendingTx = allPendingTxs[txIndices[i]];
-                for (uint256 j = 0; j < pendingTx.noteHashes.length; j++) {
-                    pendingNoteHashes[noteHashesIdx++] = pendingTx.noteHashes[
-                        j
-                    ];
-                }
-                for (uint256 j = 0; j < pendingTx.nullifiers.length; j++) {
-                    pendingNullifiers[nullifiersIdx++] = pendingTx.nullifiers[
-                        j
-                    ];
-                }
-            }
+    function $() private pure returns (Storage storage s) {
+        assembly {
+            s.slot := STORAGE_SLOT
         }
-
-        bytes32[] memory publicInputs = new bytes32[](
-            (MAX_NOTES_PER_ROLLUP + 4) + (MAX_NULLIFIERS_PER_ROLLUP + 4)
-        );
-        uint256 p = 0;
-        // note hashes
-        for (uint256 i = 0; i < pendingNoteHashes.length; i++) {
-            publicInputs[p++] = pendingNoteHashes[i].toBytes32();
-        }
-        publicInputs[p++] = noteHashTree.root;
-        publicInputs[p++] = bytes32(
-            uint256(noteHashTree.nextAvailableLeafIndex)
-        );
-        publicInputs[p++] = newNoteHashTree.root;
-        publicInputs[p++] = bytes32(
-            uint256(newNoteHashTree.nextAvailableLeafIndex)
-        );
-
-        // nullifiers
-        for (uint256 i = 0; i < pendingNullifiers.length; i++) {
-            publicInputs[p++] = pendingNullifiers[i].toBytes32();
-        }
-        publicInputs[p++] = nullifierTree.root;
-        publicInputs[p++] = bytes32(
-            uint256(nullifierTree.nextAvailableLeafIndex)
-        );
-        publicInputs[p++] = newNullifierTree.root;
-        publicInputs[p++] = bytes32(
-            uint256(newNullifierTree.nextAvailableLeafIndex)
-        );
-        require(p == publicInputs.length, "Invalid public inputs");
-        require(
-            rollupVerifier.verify(proof, publicInputs),
-            "Invalid rollup proof"
-        );
-
-        // mark as rolled up
-        for (uint256 i = 0; i < txIndices.length; i++) {
-            uint256 txIndex = txIndices[i];
-            require(
-                !allPendingTxs[txIndex].rolledUp,
-                TxAlreadyRolledUp(txIndex)
-            );
-            allPendingTxs[txIndex].rolledUp = true;
-        }
-
-        // state update
-        emit NoteHashes(noteHashBatchIndex++, pendingNoteHashes);
-        emit Nullifiers(nullifierBatchIndex++, pendingNullifiers);
-        noteHashTree = newNoteHashTree;
-        nullifierTree = newNullifierTree;
-        // TODO: remove this disgusting gas waste
-        for (uint256 i = 0; i < pendingNoteHashes.length; i++) {
-            noteHashState[
-                pendingNoteHashes[i]
-            ] = NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP;
-        }
-        // TODO: remove this disgusting gas waste
-        for (uint256 i = 0; i < pendingNullifiers.length; i++) {
-            nullifierState[
-                pendingNullifiers[i]
-            ] = NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP;
-        }
-    }
-
-    function _addPendingTx(
-        NoteInput[] memory noteInputs,
-        bytes32[] memory nullifiers
-    ) private {
-        require(noteInputs.length <= MAX_NOTES_PER_ROLLUP, "too many notes");
-        require(
-            nullifiers.length <= MAX_NULLIFIERS_PER_ROLLUP,
-            "too many nullifiers"
-        );
-
-        allPendingTxs.push();
-        PendingTx storage pendingTx = allPendingTxs[allPendingTxs.length - 1];
-
-        for (uint256 i = 0; i < noteInputs.length; i++) {
-            Fr noteHash = FrLib.create(noteInputs[i].noteHash);
-            require(
-                noteHashState[noteHash] ==
-                    NOTE_HASH_OR_NULLIFIER_STATE_NOT_EXISTS,
-                NoteHashExists(noteHash)
-            );
-            noteHashState[noteHash] = NOTE_HASH_OR_NULLIFIER_STATE_PENDING;
-            // TODO(perf): this is a waste of gas
-            pendingTx.noteHashes.push(noteHash);
-        }
-
-        for (uint256 i = 0; i < nullifiers.length; i++) {
-            Fr nullifier = FrLib.create(nullifiers[i]);
-            require(
-                nullifierState[nullifier] ==
-                    NOTE_HASH_OR_NULLIFIER_STATE_NOT_EXISTS,
-                NullifierExists(nullifier)
-            );
-            nullifierState[nullifier] = NOTE_HASH_OR_NULLIFIER_STATE_PENDING;
-            // TODO(perf): this is a waste of gas
-            pendingTx.nullifiers.push(nullifier);
-        }
-
-        emit EncryptedNotes(noteInputs);
-    }
-
-    function getAllPendingTxs() external view returns (PendingTx[] memory) {
-        return allPendingTxs;
-    }
-
-    function getNoteHashTree()
-        external
-        view
-        returns (HeaderLib.AppendOnlyTreeSnapshot memory)
-    {
-        return noteHashTree;
-    }
-
-    function getNullifierTree()
-        external
-        view
-        returns (HeaderLib.AppendOnlyTreeSnapshot memory)
-    {
-        return nullifierTree;
     }
 }
+
+// keccak256("storage.PoolERC20") - 1
+bytes32 constant STORAGE_SLOT = 0x2f64cf42bfffdfbf199004d3529d110e06f94674b975e86640e5dc11173fedfe;
