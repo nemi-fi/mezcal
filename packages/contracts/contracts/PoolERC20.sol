@@ -18,6 +18,13 @@ uint32 constant MAX_NOTES_PER_ROLLUP = 64;
 // Note: keep in sync with other languages
 uint32 constant MAX_NULLIFIERS_PER_ROLLUP = 64;
 
+// Note: keep in sync with other languages
+uint256 constant NOTE_HASH_OR_NULLIFIER_STATE_NOT_EXISTS = 0;
+// Note: keep in sync with other languages
+uint256 constant NOTE_HASH_OR_NULLIFIER_STATE_PENDING = 1;
+// Note: keep in sync with other languages
+uint256 constant NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP = 2;
+
 struct PendingTx {
     bool rolledUp;
     Fr[] noteHashes;
@@ -54,7 +61,7 @@ contract PoolERC20 {
         Fr[MAX_NOTES_PER_ROLLUP] noteHashes
     );
     error NoteHashExists(Fr noteHash);
-    mapping(Fr => bool) public noteHashExists;
+    mapping(Fr => uint256) public noteHashState; // TODO: nuke this
     HeaderLib.AppendOnlyTreeSnapshot noteHashTree;
     uint256 noteHashBatchIndex;
 
@@ -64,7 +71,7 @@ contract PoolERC20 {
         Fr[MAX_NULLIFIERS_PER_ROLLUP] nullifiers
     );
     error NullifierExists(Fr nullifier);
-    mapping(Fr => bool) public nullifierExists;
+    mapping(Fr => uint256) public nullifierState; // TODO: nuke this
     HeaderLib.AppendOnlyTreeSnapshot nullifierTree;
     uint256 nullifierBatchIndex;
 
@@ -331,6 +338,18 @@ contract PoolERC20 {
         emit Nullifiers(nullifierBatchIndex++, pendingNullifiers);
         noteHashTree = newNoteHashTree;
         nullifierTree = newNullifierTree;
+        // TODO: remove this disgusting gas waste
+        for (uint256 i = 0; i < pendingNoteHashes.length; i++) {
+            noteHashState[
+                pendingNoteHashes[i]
+            ] = NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP;
+        }
+        // TODO: remove this disgusting gas waste
+        for (uint256 i = 0; i < pendingNullifiers.length; i++) {
+            nullifierState[
+                pendingNullifiers[i]
+            ] = NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP;
+        }
     }
 
     function _addPendingTx(
@@ -348,16 +367,24 @@ contract PoolERC20 {
 
         for (uint256 i = 0; i < noteInputs.length; i++) {
             Fr noteHash = FrLib.create(noteInputs[i].noteHash);
-            require(!noteHashExists[noteHash], NoteHashExists(noteHash));
-            noteHashExists[noteHash] = true;
+            require(
+                noteHashState[noteHash] ==
+                    NOTE_HASH_OR_NULLIFIER_STATE_NOT_EXISTS,
+                NoteHashExists(noteHash)
+            );
+            noteHashState[noteHash] = NOTE_HASH_OR_NULLIFIER_STATE_PENDING;
             // TODO(perf): this is a waste of gas
             pendingTx.noteHashes.push(noteHash);
         }
 
         for (uint256 i = 0; i < nullifiers.length; i++) {
             Fr nullifier = FrLib.create(nullifiers[i]);
-            require(!nullifierExists[nullifier], NullifierExists(nullifier));
-            nullifierExists[nullifier] = true;
+            require(
+                nullifierState[nullifier] ==
+                    NOTE_HASH_OR_NULLIFIER_STATE_NOT_EXISTS,
+                NullifierExists(nullifier)
+            );
+            nullifierState[nullifier] = NOTE_HASH_OR_NULLIFIER_STATE_PENDING;
             // TODO(perf): this is a waste of gas
             pendingTx.nullifiers.push(nullifier);
         }

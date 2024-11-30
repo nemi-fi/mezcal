@@ -78,9 +78,7 @@ describe("PoolERC20", () => {
 
   it("shields", async () => {
     const amount = 100n;
-    const {
-      note: { randomness },
-    } = await service.shield({
+    const { note } = await service.shield({
       account: alice,
       token: usdc,
       amount,
@@ -88,14 +86,7 @@ describe("PoolERC20", () => {
     });
 
     await service.rollup();
-    expect(await service.getEmittedNotes(aliceSecretKey)).to.deep.equal([
-      {
-        owner: await service.computeCompleteWaAddress(aliceSecretKey),
-        token: await usdc.getAddress(),
-        value: amount,
-        randomness,
-      },
-    ]);
+    expect(await service.getEmittedNotes(aliceSecretKey)).to.deep.equal([note]);
     expect(await service.balanceOf(usdc, aliceSecretKey)).to.equal(amount);
     expect(await usdc.balanceOf(pool)).to.equal(amount);
   });
@@ -271,6 +262,7 @@ describe("PoolERC20", () => {
       ],
       calls,
     });
+    await service.rollup();
 
     expect(await service.balanceOf(usdc, aliceSecretKey)).to.eq(
       initialBalance - amountOut,
@@ -286,6 +278,31 @@ describe("PoolERC20", () => {
   it.skip("fails to transfer if note is pending", async () => {});
   it.skip("fails to transfer if note is nullified", async () => {});
   it.skip("fails to double spend a note", async () => {});
+
+  it("does not have notes until it's rolled up", async () => {
+    const { note } = await service.shield({
+      account: alice,
+      token: usdc,
+      amount: 100n,
+      secretKey: aliceSecretKey,
+    });
+    expect(await service.getEmittedNotes(aliceSecretKey)).to.deep.equal([]);
+    await service.rollup();
+    expect(await service.getEmittedNotes(aliceSecretKey)).to.deep.equal([note]);
+
+    const { changeNote } = await service.transfer({
+      secretKey: aliceSecretKey,
+      fromNote: note,
+      to: await service.computeCompleteWaAddress(bobSecretKey),
+      amount: 100n,
+    });
+    expect(await service.getEmittedNotes(aliceSecretKey)).to.deep.equal([note]); // still exists
+    await service.rollup();
+    expect(changeNote.value).to.eq(0n); // sanity check
+    expect(await service.getEmittedNotes(aliceSecretKey)).to.deep.equal([
+      changeNote,
+    ]);
+  });
 });
 
 async function getCircuit(name: string) {
