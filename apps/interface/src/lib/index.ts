@@ -18,12 +18,20 @@ const queryClient = new QueryClient({
 
 const queries = new QueriesService(queryClient);
 
-const chainId = 31337;
-const tokens = [
-  new Token(chainId, deployments[chainId].contracts.MockUSDC, 6, "USDC"),
-  new Token(chainId, deployments[chainId].contracts.MockBTC, 8, "BTC"),
-] as const;
 const provider = new ethers.JsonRpcProvider("http://localhost:8545");
+
+// const chainId = 31337;
+// const tokens = [
+//   new Token(chainId, deployments[chainId].contracts.MockUSDC, 6, "USDC"),
+//   new Token(chainId, deployments[chainId].contracts.MockBTC, 8, "BTC"),
+// ] as const;
+
+const chainId = 8453;
+const tokens = [
+  new Token(chainId, "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", 6, "USDC"),
+  new Token(chainId, "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf", 8, "BTC"),
+] as const;
+
 const encryption = new EncryptionService();
 async function getCircuit(artifact: any) {
   const { Noir } = await import("@noir-lang/noir_js");
@@ -54,6 +62,7 @@ const rollup = new RollupService(
 export const lib = {
   queries,
   rollup,
+  chainId,
   relayer,
   tokens,
   provider,

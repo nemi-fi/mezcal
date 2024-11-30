@@ -6,6 +6,7 @@
     MockERC20__factory,
   } from "@repo/contracts/typechain-types";
   import { Ui } from "@repo/ui";
+  import { utils } from "@repo/utils";
   import { createQuery } from "@tanstack/svelte-query";
   import { CurrencyAmount, Token } from "@uniswap/sdk-core";
   import { ethers } from "ethers";
@@ -70,7 +71,18 @@
               token.address,
               lib.relayer,
             );
-            const tx = await contract.mintForTests(account.address, 10000000n);
+            // const tx = await contract.mintForTests(account.address, 10000000n);
+
+            const whaleAddress = "0x40ebc1ac8d4fedd2e144b75fe9c0420be82750c6";
+            await lib.provider.send("anvil_impersonateAccount", [whaleAddress]);
+            const whale = await lib.provider.getSigner(whaleAddress);
+            const tx = await contract
+              .connect(whale)
+              .transfer(
+                account.address,
+                utils.parseCurrencyAmount(token, "10").quotient.toString(),
+              );
+
             await tx.wait();
             lib.queries.invalidateAll();
           }
