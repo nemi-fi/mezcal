@@ -35,7 +35,7 @@ const tokens = [
 //   new Token(chainId, "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf", 8, "BTC"),
 // ] as const;
 
-const encryption = new EncryptionService();
+const encryption = EncryptionService.getSingleton();
 async function getCircuit(artifact: any) {
   const { Noir } = await import("@noir-lang/noir_js");
   const { UltraPlonkBackend } = await import("@aztec/bb.js");

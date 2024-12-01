@@ -1,18 +1,21 @@
 import { Aes128Gcm, CipherSuite, HkdfSha256 } from "@hpke/core";
 import { DhkemX25519HkdfSha256, X25519 } from "@hpke/dhkem-x25519";
+import { utils } from "@repo/utils";
 import { ethers } from "ethers";
 import { assert } from "ts-essentials";
 
 export class EncryptionService {
   #suite: CipherSuite;
 
-  constructor() {
+  private constructor() {
     this.#suite = new CipherSuite({
       kem: new DhkemX25519HkdfSha256(),
       kdf: new HkdfSha256(),
       aead: new Aes128Gcm(),
     });
   }
+
+  static getSingleton = utils.lazyValue(() => new EncryptionService());
 
   async encrypt(publicKey: ethers.BytesLike, messageBytes: ethers.BytesLike) {
     const importedPublicKey = await this.#importPublicKey(publicKey);

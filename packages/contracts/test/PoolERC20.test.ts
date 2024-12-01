@@ -29,6 +29,7 @@ describe("PoolERC20", () => {
   let btc: MockERC20;
   let service: RollupService;
   let encryption: EncryptionService;
+  let CompleteWaAddress: typeof import("@repo/interface/src/lib/services/RollupService").CompleteWaAddress;
   snapshottedBeforeEach(async () => {
     [alice, bob, charlie] = await ethers.getSigners();
     await typedDeployments.fixture();
@@ -42,6 +43,13 @@ describe("PoolERC20", () => {
 
     await usdc.mintForTests(alice, await parseUnits(usdc, "1000000"));
     await usdc.connect(alice).approve(pool, ethers.MaxUint256);
+
+    CompleteWaAddress = (
+      await tsImport(
+        "@repo/interface/src/lib/services/RollupService",
+        __filename,
+      )
+    ).CompleteWaAddress;
   });
 
   beforeEach(async () => {
@@ -53,7 +61,7 @@ describe("PoolERC20", () => {
       "@repo/interface/src/lib/services/EncryptionService",
       __filename,
     );
-    encryption = new EncryptionService();
+    encryption = EncryptionService.getSingleton();
     service = new RollupService(
       pool,
       encryption,
@@ -205,7 +213,7 @@ describe("PoolERC20", () => {
     const { nullifier, changeNote, toNote } = await service.transfer({
       secretKey: aliceSecretKey,
       fromNote: note,
-      to: await service.computeCompleteWaAddress(bobSecretKey),
+      to: await CompleteWaAddress.fromSecretKey(bobSecretKey),
       amount: transferAmount,
     });
 
@@ -251,7 +259,7 @@ describe("PoolERC20", () => {
     await service.transfer({
       secretKey: aliceSecretKey,
       fromNote: shieldedNote,
-      to: await service.computeCompleteWaAddress(bobSecretKey),
+      to: await CompleteWaAddress.fromSecretKey(bobSecretKey),
       amount: 30n,
     });
     // TODO: split notes even if they are not rolled up
@@ -267,7 +275,7 @@ describe("PoolERC20", () => {
     await service.transfer({
       secretKey: bobSecretKey,
       fromNote: bobNote,
-      to: await service.computeCompleteWaAddress(charlieSecretKey),
+      to: await CompleteWaAddress.fromSecretKey(charlieSecretKey),
       amount: 10n,
     });
     await service.rollup();
@@ -320,7 +328,7 @@ describe("PoolERC20", () => {
       },
     ];
 
-    const to = await service.computeCompleteWaAddress(bobSecretKey);
+    const to = await CompleteWaAddress.fromSecretKey(bobSecretKey);
     await service.execute({
       fromSecretKey: aliceSecretKey,
       fromNotes: [shieldedNote],
@@ -375,7 +383,7 @@ describe("PoolERC20", () => {
     const { changeNote } = await service.transfer({
       secretKey: aliceSecretKey,
       fromNote: note,
-      to: await service.computeCompleteWaAddress(bobSecretKey),
+      to: await CompleteWaAddress.fromSecretKey(bobSecretKey),
       amount: 100n,
     });
     expect(await service.getBalanceNotesOf(usdc, aliceSecretKey)).to.deep.equal(

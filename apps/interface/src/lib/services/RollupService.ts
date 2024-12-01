@@ -82,7 +82,7 @@ export class RollupService {
     const randomness = Fr.random().toString();
     console.time("shield generateProof");
     const note: ValueNote = {
-      owner: await this.computeCompleteWaAddress(secretKey),
+      owner: await CompleteWaAddress.fromSecretKey(secretKey),
       token: await ethers.resolveAddress(token),
       value: amount,
       randomness,
@@ -192,7 +192,7 @@ export class RollupService {
     console.timeEnd("join generateProof");
 
     const joinNote: ValueNote = {
-      owner: await this.computeCompleteWaAddress(secretKey),
+      owner: await CompleteWaAddress.fromSecretKey(secretKey),
       token: notes[0]!.token,
       value: notes.reduce((acc, note) => acc + note.value, 0n),
       randomness: join_randomness,
@@ -432,7 +432,7 @@ export class RollupService {
       emptyNoteInput,
     );
 
-    const from = await this.computeCompleteWaAddress(fromSecretKey);
+    const from = await CompleteWaAddress.fromSecretKey(fromSecretKey);
     const change_notes = utils.arrayPadEnd(
       await Promise.all(
         notesOutNotPadded.map((note, i) => {
@@ -737,7 +737,7 @@ export class RollupService {
   }
 
   private async getEmittedNotes(secretKey: string) {
-    const { address } = await this.computeCompleteWaAddress(secretKey);
+    const { address } = await CompleteWaAddress.fromSecretKey(secretKey);
     const encrypted = sortEvents(
       await this.contract.queryFilter(this.contract.filters.EncryptedNotes()),
     )
@@ -807,15 +807,6 @@ export class RollupService {
       secretKey,
     ]);
   }
-
-  // TODO: move to `CompleteWaAddress` class
-  async computeCompleteWaAddress(secretKey: string) {
-    const address = (
-      await poseidon2Hash([GENERATOR_INDEX__WA_ADDRESS, secretKey])
-    ).toString();
-    const publicKey = await this.encryption.derivePublicKey(secretKey);
-    return new CompleteWaAddress(address, publicKey);
-  }
 }
 
 export interface ValueNote {
@@ -842,6 +833,15 @@ export class CompleteWaAddress {
     utils.assert(bytes.length === 64, "invalid complete address");
     const address = ethers.dataSlice(bytes, 0, 32);
     const publicKey = ethers.dataSlice(bytes, 32, 64);
+    return new CompleteWaAddress(address, publicKey);
+  }
+
+  static async fromSecretKey(secretKey: string) {
+    const address = (
+      await poseidon2Hash([GENERATOR_INDEX__WA_ADDRESS, secretKey])
+    ).toString();
+    const publicKey =
+      await EncryptionService.getSingleton().derivePublicKey(secretKey);
     return new CompleteWaAddress(address, publicKey);
   }
 }
