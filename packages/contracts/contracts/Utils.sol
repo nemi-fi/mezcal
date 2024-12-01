@@ -34,8 +34,6 @@ struct Execution {
     Call[] calls;
     TokenAmount[MAX_TOKENS_IN_PER_EXECUTION] amountsIn;
     TokenAmount[MAX_TOKENS_OUT_PER_EXECUTION] amountsOut;
-    // // TODO: use an auction for the fee amount
-    // TokenAmount fee;
 }
 
 library PublicInputs {

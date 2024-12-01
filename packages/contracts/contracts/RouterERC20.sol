@@ -26,7 +26,7 @@ contract RouterERC20 is Ownable(msg.sender) {
         for (uint256 i = 0; i < calls.length; i++) {
             Call memory call = calls[i];
             // TODO: support sending ETH
-            call.to.functionCall(call.data); // TODO: this may be gas optimized if not using openzeppelin
+            call.to.functionCall(call.data); // TODO(perf): this may be gas optimized if not using openzeppelin
         }
 
         for (uint256 i = 0; i < amountsIn.length; i++) {

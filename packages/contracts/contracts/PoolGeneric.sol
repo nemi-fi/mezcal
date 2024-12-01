@@ -34,10 +34,10 @@ contract PoolGeneric {
         RollupVerifier rollupVerifier;
         PendingTx[] allPendingTxs;
         HeaderLib.AppendOnlyTreeSnapshot noteHashTree;
-        mapping(Fr => uint256) noteHashState; // TODO: nuke this
+        mapping(Fr => uint256) noteHashState; // TODO(perf): nuke this
         uint256 noteHashBatchIndex;
         HeaderLib.AppendOnlyTreeSnapshot nullifierTree;
-        mapping(Fr => uint256) nullifierState; // TODO: nuke this
+        mapping(Fr => uint256) nullifierState; // TODO(perf): nuke this
         uint256 nullifierBatchIndex;
     }
 
@@ -149,13 +149,13 @@ contract PoolGeneric {
         );
         _poolGenericStorage().noteHashTree = newNoteHashTree;
         _poolGenericStorage().nullifierTree = newNullifierTree;
-        // TODO: remove this disgusting gas waste
+        // TODO(perf): remove this disgusting gas waste
         for (uint256 i = 0; i < pendingNoteHashes.length; i++) {
             _poolGenericStorage().noteHashState[
                     pendingNoteHashes[i]
                 ] = NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP;
         }
-        // TODO: remove this disgusting gas waste
+        // TODO(perf): remove this disgusting gas waste
         for (uint256 i = 0; i < pendingNullifiers.length; i++) {
             _poolGenericStorage().nullifierState[
                     pendingNullifiers[i]
@@ -179,7 +179,7 @@ contract PoolGeneric {
         ];
 
         for (uint256 i = 0; i < noteInputs.length; i++) {
-            Fr noteHash = FrLib.create(noteInputs[i].noteHash);
+            Fr noteHash = FrLib.from(noteInputs[i].noteHash);
             require(
                 _poolGenericStorage().noteHashState[noteHash] ==
                     NOTE_HASH_OR_NULLIFIER_STATE_NOT_EXISTS,
@@ -193,7 +193,7 @@ contract PoolGeneric {
         }
 
         for (uint256 i = 0; i < nullifiers.length; i++) {
-            Fr nullifier = FrLib.create(nullifiers[i]);
+            Fr nullifier = FrLib.from(nullifiers[i]);
             require(
                 _poolGenericStorage().nullifierState[nullifier] ==
                     NOTE_HASH_OR_NULLIFIER_STATE_NOT_EXISTS,
@@ -230,11 +230,11 @@ contract PoolGeneric {
     }
 
     function noteHashState(bytes32 noteHash) external view returns (uint256) {
-        return _poolGenericStorage().noteHashState[FrLib.create(noteHash)];
+        return _poolGenericStorage().noteHashState[FrLib.from(noteHash)];
     }
 
     function nullifierState(bytes32 nullifier) external view returns (uint256) {
-        return _poolGenericStorage().nullifierState[FrLib.create(nullifier)];
+        return _poolGenericStorage().nullifierState[FrLib.from(nullifier)];
     }
 
     function _poolGenericStorage()
