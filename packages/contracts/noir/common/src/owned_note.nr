@@ -29,8 +29,7 @@ pub struct NoteConsumptionInputs {
 
 // TODO: generalize for any Note/OwnedNote
 pub fn consume_owned_note(
-    note_hash_tree_root: Field,
-    nullifier_tree_root: Field,
+    tree_roots: crate::TreeRoots,
     secret_key: Field,
     inputs: NoteConsumptionInputs,
 ) -> Field {
@@ -38,14 +37,14 @@ pub fn consume_owned_note(
         inputs.note.hash(),
         inputs.note_index,
         inputs.note_sibling_path,
-        note_hash_tree_root,
+        tree_roots.note_hash_root,
     );
     let nullifier = compute_nullifier_of_owned_note(inputs.note, secret_key);
     merkle_tree::assert_check_non_membership(
         nullifier,
         inputs.nullifier_low_leaf_preimage,
         inputs.nullifier_low_leaf_membership_witness,
-        nullifier_tree_root,
+        tree_roots.nullifier_root,
     );
     nullifier
 }

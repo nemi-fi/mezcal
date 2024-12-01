@@ -7,10 +7,7 @@ struct Result {
 }
 
 fn main(
-    // note hashes
-    note_hash_tree_root: pub Field,
-    // nullifiers
-    nullifier_tree_root: pub Field,
+    tree_roots: pub common::TreeRoots,
     // from
     from_secret_key: Field,
     from_note_inputs: common::NoteConsumptionInputs,
@@ -25,8 +22,7 @@ fn main(
         from_note_inputs,
         common::TokenAmount { token: from_note_inputs.note.token, amount: amount },
         change_randomness,
-        note_hash_tree_root,
-        nullifier_tree_root,
+        tree_roots,
         from_secret_key,
     );
     let to_note = ValueNote {

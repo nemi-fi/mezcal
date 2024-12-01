@@ -5,9 +5,7 @@ struct Result {
 }
 
 fn main(
-    // trees
-    note_hash_tree_root: pub Field,
-    nullifier_tree_root: pub Field,
+    tree_roots: pub common::TreeRoots,
     // accounts
     from_secret_key: Field,
     to_address: Field,
@@ -39,8 +37,7 @@ fn main(
                         note_input,
                         amount_out,
                         change_randomness[i],
-                        note_hash_tree_root,
-                        nullifier_tree_root,
+                        tree_roots,
                         from_secret_key,
                     );
                     (change_note.hash(), nullifier)

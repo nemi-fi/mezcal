@@ -132,17 +132,12 @@ export class RollupService {
     });
     assert(changeNote.value >= 0n, "invalid change note");
 
-    const noteHashTree = await this.getNoteHashTree();
-    const nullifierTree = await this.getNullifierTree();
     const nullifier = await fromNote.computeNullifier(secretKey);
 
     const unshieldCircuit = (await this.circuits).unshield;
     console.time("unshield generateProof");
     const { witness } = await unshieldCircuit.noir.execute({
-      note_hash_tree_root: ethers.hexlify(
-        noteHashTree.getRoot(INCLUDE_UNCOMMITTED),
-      ),
-      nullifier_tree_root: nullifierTree.getRoot(),
+      tree_roots: await this.getTreeRoots(),
       from_secret_key: secretKey,
       from_note_inputs: await this.toNoteConsumptionInputs(secretKey, fromNote),
       to,
@@ -179,12 +174,7 @@ export class RollupService {
     const joinCircuit = (await this.circuits).join;
     console.time("join generateProof");
     const { witness } = await joinCircuit.noir.execute({
-      note_hash_tree_root: ethers.hexlify(
-        (await this.getNoteHashTree()).getRoot(INCLUDE_UNCOMMITTED),
-      ),
-      nullifier_tree_root: ethers.hexlify(
-        (await this.getNullifierTree()).getRoot(),
-      ),
+      tree_roots: await this.getTreeRoots(),
       from_secret_key: secretKey,
       join_randomness,
       notes: await Promise.all(
@@ -234,10 +224,7 @@ export class RollupService {
     const to_randomness = Fr.random().toString();
     const change_randomness = Fr.random().toString();
     const input = {
-      note_hash_tree_root: ethers.hexlify(
-        noteHashTree.getRoot(INCLUDE_UNCOMMITTED),
-      ),
-      nullifier_tree_root: nullifierTree.getRoot(),
+      tree_roots: await this.getTreeRoots(),
       from_note_inputs: await this.toNoteConsumptionInputs(secretKey, fromNote),
       from_secret_key: secretKey,
       to: to.address,
@@ -380,9 +367,6 @@ export class RollupService {
 
     const notesOutNotPadded = fromNotes;
 
-    const noteHashTree = await this.getNoteHashTree();
-    const nullifierTree = await this.getNullifierTree();
-
     const to_randomness = times(MAX_TOKENS_IN_PER_EXECUTION, () =>
       Fr.random().toString(),
     );
@@ -465,10 +449,7 @@ export class RollupService {
     );
 
     const input = {
-      note_hash_tree_root: ethers.hexlify(
-        noteHashTree.getRoot(INCLUDE_UNCOMMITTED),
-      ),
-      nullifier_tree_root: nullifierTree.getRoot(),
+      tree_roots: await this.getTreeRoots(),
       // accounts
       from_secret_key: fromSecretKey,
       to_address: to.address,
@@ -766,6 +747,15 @@ export class RollupService {
       NULLIFIER_TREE_HEIGHT,
     );
     return nullifierTree;
+  }
+
+  async getTreeRoots() {
+    const noteHashTree = await this.getNoteHashTree();
+    const nullifierTree = await this.getNullifierTree();
+    return {
+      note_hash_root: ethers.hexlify(noteHashTree.getRoot(INCLUDE_UNCOMMITTED)),
+      nullifier_root: nullifierTree.getRoot(),
+    };
   }
 }
 

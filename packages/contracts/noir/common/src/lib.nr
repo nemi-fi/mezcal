@@ -54,3 +54,8 @@ pub struct TokenAmount {
     // TODO(security): use larger type for the amount
     pub amount: u64,
 }
+
+pub struct TreeRoots {
+    pub note_hash_root: Field,
+    pub nullifier_root: Field,
+}
