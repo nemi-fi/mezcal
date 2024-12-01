@@ -88,7 +88,9 @@ describe("PoolERC20", () => {
     });
 
     await service.rollup();
-    expect(await service.getEmittedNotes(aliceSecretKey)).to.deep.equal([note]);
+    expect(await service.getBalanceNotesOf(usdc, aliceSecretKey)).to.deep.equal(
+      [note],
+    );
     expect(await service.balanceOf(usdc, aliceSecretKey)).to.equal(amount);
     expect(await usdc.balanceOf(pool)).to.equal(amount);
   });
@@ -198,7 +200,7 @@ describe("PoolERC20", () => {
     await service.rollup();
 
     // interact
-    const [note] = await service.getEmittedNotes(aliceSecretKey);
+    const [note] = await service.getBalanceNotesOf(usdc, aliceSecretKey);
     const transferAmount = 123n;
     const { nullifier, changeNote, toNote } = await service.transfer({
       secretKey: aliceSecretKey,
@@ -241,7 +243,10 @@ describe("PoolERC20", () => {
       secretKey: aliceSecretKey,
     });
     await service.rollup();
-    const [shieldedNote] = await service.getEmittedNotes(aliceSecretKey);
+    const [shieldedNote] = await service.getBalanceNotesOf(
+      usdc,
+      aliceSecretKey,
+    );
 
     await service.transfer({
       secretKey: aliceSecretKey,
@@ -257,7 +262,7 @@ describe("PoolERC20", () => {
     //   amount: 10n,
     // });
     await service.rollup();
-    const [bobNote] = await service.getEmittedNotes(bobSecretKey);
+    const [bobNote] = await service.getBalanceNotesOf(usdc, bobSecretKey);
 
     await service.transfer({
       secretKey: bobSecretKey,
@@ -288,7 +293,10 @@ describe("PoolERC20", () => {
       secretKey: aliceSecretKey,
     });
     await service.rollup();
-    const [shieldedNote] = await service.getEmittedNotes(aliceSecretKey);
+    const [shieldedNote] = await service.getBalanceNotesOf(
+      usdc,
+      aliceSecretKey,
+    );
 
     const tokenIn = await btc.getAddress();
     const tokenOut = await usdc.getAddress();
@@ -356,9 +364,13 @@ describe("PoolERC20", () => {
       amount: 100n,
       secretKey: aliceSecretKey,
     });
-    expect(await service.getEmittedNotes(aliceSecretKey)).to.deep.equal([]);
+    expect(await service.getBalanceNotesOf(usdc, aliceSecretKey)).to.deep.equal(
+      [],
+    );
     await service.rollup();
-    expect(await service.getEmittedNotes(aliceSecretKey)).to.deep.equal([note]);
+    expect(await service.getBalanceNotesOf(usdc, aliceSecretKey)).to.deep.equal(
+      [note],
+    );
 
     const { changeNote } = await service.transfer({
       secretKey: aliceSecretKey,
@@ -366,12 +378,14 @@ describe("PoolERC20", () => {
       to: await service.computeCompleteWaAddress(bobSecretKey),
       amount: 100n,
     });
-    expect(await service.getEmittedNotes(aliceSecretKey)).to.deep.equal([note]); // still exists
+    expect(await service.getBalanceNotesOf(usdc, aliceSecretKey)).to.deep.equal(
+      [note],
+    ); // still exists
     await service.rollup();
     expect(changeNote.value).to.eq(0n); // sanity check
-    expect(await service.getEmittedNotes(aliceSecretKey)).to.deep.equal([
-      changeNote,
-    ]);
+    expect(await service.getBalanceNotesOf(usdc, aliceSecretKey)).to.deep.equal(
+      [changeNote],
+    );
   });
 });
 

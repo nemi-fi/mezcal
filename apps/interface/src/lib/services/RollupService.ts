@@ -736,7 +736,7 @@ export class RollupService {
     ).toString();
   }
 
-  async getEmittedNotes(secretKey: string) {
+  private async getEmittedNotes(secretKey: string) {
     const { address } = await this.computeCompleteWaAddress(secretKey);
     const encrypted = sortEvents(
       await this.contract.queryFilter(this.contract.filters.EncryptedNotes()),
