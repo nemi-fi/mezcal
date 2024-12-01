@@ -10,13 +10,13 @@ uint32 constant MAX_TOKENS_IN_PER_EXECUTION = 4;
 uint32 constant MAX_TOKENS_OUT_PER_EXECUTION = 4;
 
 uint256 constant U256_LIMBS = 3;
-uint256 constant U256_CHUNK_SIZE = 120;
+uint256 constant U256_LIMB_SIZE = 120;
 
 function toNoirU256(uint256 value) pure returns (uint256[U256_LIMBS] memory) {
     uint256[U256_LIMBS] memory limbs;
-    uint256 mask = (1 << U256_CHUNK_SIZE) - 1;
+    uint256 mask = (1 << U256_LIMB_SIZE) - 1;
     for (uint256 i = 0; i < limbs.length; i++) {
-        limbs[i] = (value / (1 << (i * U256_CHUNK_SIZE))) & mask;
+        limbs[i] = (value / (1 << (i * U256_LIMB_SIZE))) & mask;
     }
     return limbs;
 }
