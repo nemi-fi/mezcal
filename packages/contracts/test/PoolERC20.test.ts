@@ -52,19 +52,25 @@ describe("PoolERC20", () => {
     ).CompleteWaAddress;
   });
 
-  beforeEach(async () => {
-    const { RollupService, INCLUDE_UNCOMMITTED } = (await tsImport(
+  before(async () => {
+    const { RollupService } = (await tsImport(
       "@repo/interface/src/lib/services/RollupService",
       __filename,
     )) as typeof import("@repo/interface/src/lib/services/RollupService");
-    const { EncryptionService } = await tsImport(
+    const { EncryptionService } = (await tsImport(
       "@repo/interface/src/lib/services/EncryptionService",
       __filename,
-    );
+    )) as typeof import("@repo/interface/src/lib/services/EncryptionService");
+    const { TreesService } = (await tsImport(
+      "@repo/interface/src/lib/services/TreesService",
+      __filename,
+    )) as typeof import("@repo/interface/src/lib/services/TreesService");
     encryption = EncryptionService.getSingleton();
+    const trees = new TreesService(pool);
     service = new RollupService(
       pool,
       encryption,
+      trees,
       await ethers.resolveProperties({
         shield: getCircuit("shield"),
         unshield: getCircuit("unshield"),
@@ -74,16 +80,7 @@ describe("PoolERC20", () => {
         rollup: getCircuit("rollup"),
       }),
     );
-    console.log(
-      "noteHashTreeRoot",
-      ethers.hexlify(
-        (await service.getNoteHashTree()).getRoot(INCLUDE_UNCOMMITTED),
-      ),
-    );
-    console.log(
-      "nullifiersTreeRoot",
-      ethers.hexlify((await service.getNullifierTree()).getRoot()),
-    );
+    console.log("roots", await trees.getTreeRoots());
   });
 
   it("shields", async () => {

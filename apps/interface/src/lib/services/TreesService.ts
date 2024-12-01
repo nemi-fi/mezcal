@@ -1,0 +1,103 @@
+import type { Fr } from "@aztec/aztec.js";
+import type { StandardTree } from "@aztec/merkle-tree";
+import type { PoolERC20 } from "@repo/contracts/typechain-types";
+import { ethers } from "ethers";
+import { isEqual, orderBy, range, times } from "lodash-es";
+import { assert } from "ts-essentials";
+import { NonMembershipTree } from "./NonMembershipTree";
+import {
+  INCLUDE_UNCOMMITTED,
+  MAX_NULLIFIERS_PER_ROLLUP,
+  NOTE_HASH_TREE_HEIGHT,
+  NULLIFIER_TREE_HEIGHT,
+  poseidon2Hash,
+} from "./RollupService";
+
+export class TreesService {
+  constructor(private contract: PoolERC20) {}
+
+  async getTreeRoots() {
+    const noteHashTree = await this.getNoteHashTree();
+    const nullifierTree = await this.getNullifierTree();
+    return {
+      note_hash_root: ethers.hexlify(noteHashTree.getRoot(INCLUDE_UNCOMMITTED)),
+      nullifier_root: nullifierTree.getRoot(),
+    };
+  }
+
+  async getNoteHashTree() {
+    const { Fr } = await import("@aztec/aztec.js");
+    const noteHashes = sortEventsWithIndex(
+      await this.contract.queryFilter(this.contract.filters.NoteHashes()),
+    ).map((x) => x.noteHashes);
+
+    const noteHashTree = await createMerkleTree(NOTE_HASH_TREE_HEIGHT);
+    if (noteHashes.length > 0) {
+      await noteHashTree.appendLeaves(
+        noteHashes.flat().map((h) => new Fr(BigInt(h))),
+      );
+      await noteHashTree.commit();
+    }
+    return noteHashTree;
+  }
+
+  async getNullifierTree() {
+    const { Fr } = await import("@aztec/aztec.js");
+
+    const nullifiers = sortEventsWithIndex(
+      await this.contract.queryFilter(this.contract.filters.Nullifiers()),
+    ).map((x) => x.nullifiers.map((n) => new Fr(BigInt(n))));
+
+    const initialNullifiersSeed = new Fr(
+      0x08a1735994d16db43c2373d0258b8f4d82ae162c297687bba68aa8a3912b042dn,
+    );
+    const initialNullifiers = await Promise.all(
+      // sub 1 because the tree has a 0 leaf already
+      times(MAX_NULLIFIERS_PER_ROLLUP - 1, (i) =>
+        poseidon2Hash([initialNullifiersSeed.toString(), i]),
+      ),
+    );
+    const allNullifiers = initialNullifiers.concat(nullifiers.flat());
+    const nullifierTree = await NonMembershipTree.new(
+      allNullifiers,
+      NULLIFIER_TREE_HEIGHT,
+    );
+    return nullifierTree;
+  }
+}
+
+function sortEventsWithIndex<T extends { args: { index: bigint } }>(
+  events: T[],
+): T["args"][] {
+  const ordered = orderBy(
+    events.map((e) => e.args),
+    (x) => x.index,
+  );
+  assert(
+    isEqual(
+      ordered.map((x) => x.index),
+      range(0, ordered.length).map((x) => BigInt(x)),
+    ),
+    `missing some events: ${ordered.map((x) => x.index).join(", ")} | ${ordered.length}`,
+  );
+  return ordered;
+}
+
+async function createMerkleTree(height: number) {
+  const { StandardTree, newTree, Poseidon } = await import(
+    "@aztec/merkle-tree"
+  );
+
+  const { Fr } = await import("@aztec/aztec.js");
+  const { AztecLmdbStore } = await import("@aztec/kv-store/lmdb");
+  const store = AztecLmdbStore.open();
+  const tree: StandardTree<Fr> = await newTree(
+    StandardTree,
+    store,
+    new Poseidon(),
+    `tree-name`,
+    Fr,
+    height,
+  );
+  return tree;
+}

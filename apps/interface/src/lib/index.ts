@@ -9,6 +9,7 @@ import { EncryptionService } from "./services/EncryptionService.js";
 import { EvmAccountService } from "./services/EvmAccountService.svelte.js";
 import { QueriesService } from "./services/QueriesService.svelte.js";
 import { RollupService } from "./services/RollupService.js";
+import { TreesService } from "./services/TreesService.js";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -52,9 +53,11 @@ const contract = PoolERC20__factory.connect(
   deployments[chainId].contracts.PoolERC20,
   relayer,
 );
+const trees = new TreesService(contract);
 const rollup = new RollupService(
   contract,
   encryption,
+  trees,
   ethers.resolveProperties({
     shield: getCircuit(import("@repo/contracts/noir/target/shield.json")),
     unshield: getCircuit(import("@repo/contracts/noir/target/unshield.json")),

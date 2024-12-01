@@ -1,10 +1,6 @@
 import type { Fr } from "@aztec/aztec.js";
 import type { UltraPlonkBackend } from "@aztec/bb.js";
-import type {
-  AppendOnlyTree,
-  StandardIndexedTree,
-  StandardTree,
-} from "@aztec/merkle-tree";
+import type { AppendOnlyTree, StandardIndexedTree } from "@aztec/merkle-tree";
 import type { Noir } from "@noir-lang/noir_js";
 import {
   PoolERC20__factory,
@@ -13,11 +9,11 @@ import {
 import type { ExecutionStruct } from "@repo/contracts/typechain-types/contracts/PoolERC20";
 import { utils } from "@repo/utils";
 import { ethers } from "ethers";
-import { compact, isEqual, orderBy, range, times } from "lodash-es";
+import { compact, isEqual, orderBy, times } from "lodash-es";
 import { assert, type AsyncOrSync } from "ts-essentials";
 import { fromNoirU256, keccak256ToFr, toNoirU256, U256_LIMBS } from "../utils";
 import { EncryptionService } from "./EncryptionService";
-import { NonMembershipTree } from "./NonMembershipTree";
+import type { TreesService } from "./TreesService";
 
 // Note: keep in sync with other languages
 export const NOTE_HASH_TREE_HEIGHT = 40;
@@ -30,7 +26,7 @@ export const NULLIFIER_TREE_HEIGHT = 40;
 // Note: keep in sync with other languages
 export const NULLIFIER_SUBTREE_HEIGHT = 6;
 // Note: keep in sync with other languages
-const MAX_NULLIFIERS_PER_ROLLUP = 64;
+export const MAX_NULLIFIERS_PER_ROLLUP = 64;
 
 // Note: keep in sync with other languages
 const GENERATOR_INDEX__WA_ADDRESS = 1;
@@ -43,9 +39,9 @@ export const MAX_TOKENS_IN_PER_EXECUTION = 4;
 export const MAX_TOKENS_OUT_PER_EXECUTION = 4;
 
 // Note: keep in sync with other languages
-const NOTE_HASH_OR_NULLIFIER_STATE_NOT_EXISTS = 0n;
+export const NOTE_HASH_OR_NULLIFIER_STATE_NOT_EXISTS = 0n;
 // Note: keep in sync with other languages
-const NOTE_HASH_OR_NULLIFIER_STATE_PENDING = 1n;
+export const NOTE_HASH_OR_NULLIFIER_STATE_PENDING = 1n;
 // Note: keep in sync with other languages
 const NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP = 2n;
 
@@ -58,6 +54,7 @@ export class RollupService {
   constructor(
     readonly contract: PoolERC20,
     private encryption: EncryptionService,
+    private trees: TreesService,
     private circuits: AsyncOrSync<{
       shield: NoirAndBackend;
       unshield: NoirAndBackend;
@@ -137,7 +134,7 @@ export class RollupService {
     const unshieldCircuit = (await this.circuits).unshield;
     console.time("unshield generateProof");
     const { witness } = await unshieldCircuit.noir.execute({
-      tree_roots: await this.getTreeRoots(),
+      tree_roots: await this.trees.getTreeRoots(),
       from_secret_key: secretKey,
       from_note_inputs: await this.toNoteConsumptionInputs(secretKey, fromNote),
       to,
@@ -176,7 +173,7 @@ export class RollupService {
     const joinCircuit = (await this.circuits).join;
     console.time("join generateProof");
     const { witness } = await joinCircuit.noir.execute({
-      tree_roots: await this.getTreeRoots(),
+      tree_roots: await this.trees.getTreeRoots(),
       from_secret_key: secretKey,
       join_randomness,
       notes: await Promise.all(
@@ -224,7 +221,7 @@ export class RollupService {
     const to_randomness = Fr.random().toString();
     const change_randomness = Fr.random().toString();
     const input = {
-      tree_roots: await this.getTreeRoots(),
+      tree_roots: await this.trees.getTreeRoots(),
       from_note_inputs: await this.toNoteConsumptionInputs(secretKey, fromNote),
       from_secret_key: secretKey,
       to: to.address,
@@ -449,7 +446,7 @@ export class RollupService {
     );
 
     const input = {
-      tree_roots: await this.getTreeRoots(),
+      tree_roots: await this.trees.getTreeRoots(),
       // accounts
       from_secret_key: fromSecretKey,
       to_address: to.address,
@@ -507,11 +504,11 @@ export class RollupService {
   async toNoteConsumptionInputs(secretKey: string, note: ValueNote) {
     const { Fr } = await import("@aztec/aztec.js");
     const nullifier = await note.computeNullifier(secretKey);
-    const nullifierTree = await this.getNullifierTree();
+    const nullifierTree = await this.trees.getNullifierTree();
     const nullifierNmWitness =
       await nullifierTree.getNonMembershipWitness(nullifier);
 
-    const noteHashTree = await this.getNoteHashTree();
+    const noteHashTree = await this.trees.getNoteHashTree();
     const noteHash = await note.hash();
     const noteIndex = noteHashTree.findLeafIndex(
       new Fr(BigInt(noteHash)),
@@ -538,15 +535,11 @@ export class RollupService {
     const pending = await this.selectTxsToRollup();
     const pendingNoteHashes = pending.noteHashes.map((h) => new Fr(BigInt(h)));
     const pendingNullifiers = pending.nullifiers.map((h) => new Fr(BigInt(h)));
-    // console.log(
-    //   "pendingNullifiers",
-    //   pendingNullifiers.map((n) => n.toString()),
-    // );
     const noteHashTreeInput = await getInsertTreeInput(
-      await this.getNoteHashTree(),
+      await this.trees.getNoteHashTree(),
       pendingNoteHashes,
     );
-    const nullifierTree = await this.getNullifierTree();
+    const nullifierTree = await this.trees.getNullifierTree();
     const nullifierTreeInput = await getInsertTreeInput(
       nullifierTree._tree,
       pendingNullifiers.map((n) => n.toBuffer()),
@@ -599,16 +592,8 @@ export class RollupService {
     const rollupCircuit = (await this.circuits).rollup;
     console.time("rollup generateProof");
     const { witness } = await rollupCircuit.noir.execute(input);
-    const { proof, publicInputs } =
-      await rollupCircuit.backend.generateProof(witness);
+    const { proof } = await rollupCircuit.backend.generateProof(witness);
     console.timeEnd("rollup generateProof");
-    // {
-    //   // debug
-    //   console.log("publicInputs js", publicInputs.length);
-    //   for (const publicInput of publicInputs) {
-    //     console.log(publicInput);
-    //   }
-    // }
 
     const tx = await this.contract.rollup(
       proof,
@@ -673,22 +658,6 @@ export class RollupService {
     };
   }
 
-  async getNoteHashTree() {
-    const { Fr } = await import("@aztec/aztec.js");
-    const noteHashes = sortEventsWithIndex(
-      await this.contract.queryFilter(this.contract.filters.NoteHashes()),
-    ).map((x) => x.noteHashes);
-
-    const noteHashTree = await createMerkleTree(NOTE_HASH_TREE_HEIGHT);
-    if (noteHashes.length > 0) {
-      await noteHashTree.appendLeaves(
-        noteHashes.flat().map((h) => new Fr(BigInt(h))),
-      );
-      await noteHashTree.commit();
-    }
-    return noteHashTree;
-  }
-
   async toNoteInput(note: ValueNote) {
     return {
       noteHash: await note.hash(),
@@ -738,39 +707,6 @@ export class RollupService {
       return note;
     });
     return compact(await Promise.all(decrypted));
-  }
-
-  async getNullifierTree() {
-    const { Fr } = await import("@aztec/aztec.js");
-
-    const nullifiers = sortEventsWithIndex(
-      await this.contract.queryFilter(this.contract.filters.Nullifiers()),
-    ).map((x) => x.nullifiers.map((n) => new Fr(BigInt(n))));
-
-    const initialNullifiersSeed = new Fr(
-      0x08a1735994d16db43c2373d0258b8f4d82ae162c297687bba68aa8a3912b042dn,
-    );
-    const initialNullifiers = await Promise.all(
-      // sub 1 because the tree has a 0 leaf already
-      times(MAX_NULLIFIERS_PER_ROLLUP - 1, (i) =>
-        poseidon2Hash([initialNullifiersSeed.toString(), i]),
-      ),
-    );
-    const allNullifiers = initialNullifiers.concat(nullifiers.flat());
-    const nullifierTree = await NonMembershipTree.new(
-      allNullifiers,
-      NULLIFIER_TREE_HEIGHT,
-    );
-    return nullifierTree;
-  }
-
-  async getTreeRoots() {
-    const noteHashTree = await this.getNoteHashTree();
-    const nullifierTree = await this.getNullifierTree();
-    return {
-      note_hash_root: ethers.hexlify(noteHashTree.getRoot(INCLUDE_UNCOMMITTED)),
-      nullifier_root: nullifierTree.getRoot(),
-    };
   }
 }
 
@@ -958,25 +894,6 @@ export async function poseidon2Hash(inputs: (bigint | string | number)[]) {
   return poseidon2Hash(inputs.map((x) => BigInt(x)));
 }
 
-async function createMerkleTree(height: number) {
-  const { StandardTree, newTree, Poseidon } = await import(
-    "@aztec/merkle-tree"
-  );
-
-  const { Fr } = await import("@aztec/aztec.js");
-  const { AztecLmdbStore } = await import("@aztec/kv-store/lmdb");
-  const store = AztecLmdbStore.open();
-  const tree: StandardTree<Fr> = await newTree(
-    StandardTree,
-    store,
-    new Poseidon(),
-    `tree-name`,
-    Fr,
-    height,
-  );
-  return tree;
-}
-
 async function getInsertTreeInput<T extends Fr | Buffer>(
   tree: AppendOnlyTree<T> | StandardIndexedTree,
   newLeaves: T[],
@@ -1028,22 +945,6 @@ async function treeToSnapshot(tree: AppendOnlyTree<Fr>) {
   };
 }
 
-function sortEventsWithIndex<T extends { args: { index: bigint } }>(
-  events: T[],
-): T["args"][] {
-  const ordered = orderBy(
-    events.map((e) => e.args),
-    (x) => x.index,
-  );
-  assert(
-    isEqual(
-      ordered.map((x) => x.index),
-      range(0, ordered.length).map((x) => BigInt(x)),
-    ),
-    `missing some events: ${ordered.map((x) => x.index).join(", ")} | ${ordered.length}`,
-  );
-  return ordered;
-}
 function sortEvents<
   T extends {
     blockNumber: number;
