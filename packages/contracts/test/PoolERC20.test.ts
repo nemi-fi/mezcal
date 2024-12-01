@@ -357,6 +357,34 @@ describe("PoolERC20", () => {
     expect(await btc.balanceOf(pool)).to.eq(amountIn);
   });
 
+  it("can't double spend a note", async () => {
+    const amount = 100n;
+    await service.shield({
+      account: alice,
+      token: usdc,
+      amount,
+      secretKey: aliceSecretKey,
+    });
+    await service.rollup();
+
+    const [note] = await service.getBalanceNotesOf(usdc, aliceSecretKey);
+    await service.transfer({
+      secretKey: aliceSecretKey,
+      fromNote: note,
+      to: await CompleteWaAddress.fromSecretKey(bobSecretKey),
+      amount: amount,
+    });
+
+    await expect(
+      service.transfer({
+        secretKey: aliceSecretKey,
+        fromNote: note,
+        to: await CompleteWaAddress.fromSecretKey(charlieSecretKey),
+        amount: amount,
+      }),
+    ).to.be.revertedWithCustomError(pool, "NullifierExists");
+  });
+
   // TODO(security): write these tests
   it.skip("fails to transfer more than balance", async () => {});
   it.skip("fails to transfer if note does not exist", async () => {});
