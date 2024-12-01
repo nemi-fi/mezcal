@@ -15,7 +15,7 @@ import { utils } from "@repo/utils";
 import { ethers } from "ethers";
 import { compact, isEqual, orderBy, range, times } from "lodash-es";
 import { assert, type AsyncOrSync } from "ts-essentials";
-import { keccak256ToFr } from "../utils";
+import { fromNoirU256, keccak256ToFr, toNoirU256, U256_LIMBS } from "../utils";
 import { EncryptionService } from "./EncryptionService";
 import { NonMembershipTree } from "./NonMembershipTree";
 
@@ -93,7 +93,7 @@ export class RollupService {
     const { witness } = await shieldCircuit.noir.execute({
       owner: note.owner.address,
       token: note.token,
-      value: note.value.toString(),
+      value: toNoirU256(note.value),
       randomness: note.randomness,
       note_hash: noteInput.noteHash,
     });
@@ -141,10 +141,12 @@ export class RollupService {
       from_secret_key: secretKey,
       from_note_inputs: await this.toNoteConsumptionInputs(secretKey, fromNote),
       to,
-      amount: {
-        amount: amount.toString(),
-        token,
-      },
+      amount: await (
+        await TokenAmount.from({
+          amount,
+          token,
+        })
+      ).toNoir(),
       change_randomness,
       // return
       nullifier: nullifier.toString(),
@@ -217,10 +219,8 @@ export class RollupService {
   }) {
     const { Fr } = await import("@aztec/aztec.js");
 
-    const nullifierTree = await this.getNullifierTree();
     const nullifier = await fromNote.computeNullifier(secretKey);
 
-    const noteHashTree = await this.getNoteHashTree();
     const to_randomness = Fr.random().toString();
     const change_randomness = Fr.random().toString();
     const input = {
@@ -228,7 +228,7 @@ export class RollupService {
       from_note_inputs: await this.toNoteConsumptionInputs(secretKey, fromNote),
       from_secret_key: secretKey,
       to: to.address,
-      amount: amount.toString(),
+      amount: toNoirU256(amount),
       to_randomness,
       change_randomness,
     };
@@ -384,7 +384,7 @@ export class RollupService {
         note: {
           owner: ethers.ZeroHash,
           token: ethers.ZeroHash,
-          value: "0",
+          value: { limbs: times(U256_LIMBS, () => "0") },
           randomness: ethers.ZeroHash,
         },
         note_sibling_path: times(NOTE_HASH_TREE_HEIGHT, () => ethers.ZeroHash),
@@ -458,10 +458,30 @@ export class RollupService {
       execution_secret,
       wrapped_execution_hash,
       // amounts in
-      amounts_in,
+      amounts_in: await Promise.all(
+        amounts_in.map(
+          async (amount) =>
+            await (
+              await TokenAmount.from({
+                token: amount.token,
+                amount: BigInt(amount.amount),
+              })
+            ).toNoir(),
+        ),
+      ),
       to_randomness,
       // amounts out
-      amounts_out,
+      amounts_out: await Promise.all(
+        amounts_out.map(
+          async (amount) =>
+            await (
+              await TokenAmount.from({
+                token: amount.token,
+                amount: BigInt(amount.amount),
+              })
+            ).toNoir(),
+        ),
+      ),
       notes_out: notes_out_consumption_inputs,
       change_randomness,
     };
@@ -499,12 +519,7 @@ export class RollupService {
     );
     assert(noteIndex != null, "note not found");
     return {
-      note: {
-        owner: note.owner.address,
-        token: note.token,
-        value: note.value.toString(),
-        randomness: note.randomness,
-      },
+      note: await note.toNoir(),
       note_sibling_path: (
         await noteHashTree.getSiblingPath(noteIndex, INCLUDE_UNCOMMITTED)
       )
@@ -781,11 +796,21 @@ export class ValueNote {
     );
   }
 
+  async toNoir() {
+    return {
+      owner: this.owner.address,
+      token: this.token,
+      value: toNoirU256(this.value),
+      randomness: this.randomness,
+    };
+  }
+
   async serialize(): Promise<bigint[]> {
+    const value = toNoirU256(this.value);
     return [
       BigInt(this.owner.address),
       BigInt(this.token),
-      BigInt(this.value),
+      ...value.limbs.map((x) => BigInt(x)),
       BigInt(this.randomness),
     ];
   }
@@ -795,12 +820,15 @@ export class ValueNote {
     publicKey: string,
   ): Promise<ValueNote> {
     const fieldsStr = fields.map((x) => ethers.toBeArray(x));
-    return new ValueNote(
-      new CompleteWaAddress(ethers.zeroPadValue(fieldsStr[0]!, 32), publicKey),
-      ethers.zeroPadValue(fieldsStr[1]!, 20),
-      fields[2]!,
-      ethers.zeroPadValue(fieldsStr[3]!, 32),
-    );
+    return await ValueNote.from({
+      owner: new CompleteWaAddress(
+        ethers.zeroPadValue(fieldsStr[0]!, 32),
+        publicKey,
+      ),
+      token: ethers.zeroPadValue(fieldsStr[1]!, 20),
+      value: fromNoirU256({ limbs: fields.slice(2, 2 + U256_LIMBS) }),
+      randomness: ethers.zeroPadValue(fieldsStr[2 + U256_LIMBS]!, 32),
+    });
   }
 
   async hash() {
@@ -861,6 +889,24 @@ export class ValueNote {
 
   static async serializedLength() {
     return (await (await ValueNote.empty()).serialize()).length;
+  }
+}
+
+export class TokenAmount {
+  constructor(
+    readonly token: string,
+    readonly amount: bigint,
+  ) {}
+
+  static async from(params: { token: string; amount: bigint }) {
+    return new TokenAmount(params.token, params.amount);
+  }
+
+  async toNoir() {
+    return {
+      token: this.token,
+      amount: toNoirU256(this.amount),
+    };
   }
 }
 

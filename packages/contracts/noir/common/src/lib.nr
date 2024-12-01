@@ -1,3 +1,4 @@
+use bignum::{BigNum, fields::U256::U256Params};
 use protocol_types::hash::poseidon2_hash_with_separator;
 
 mod note;
@@ -38,6 +39,11 @@ pub global GENERATOR_INDEX__WA_ADDRESS: Field = 1;
 // Note: keep in sync with other languages
 pub global GENERATOR_INDEX__NOTE_NULLIFIER: Field = 2;
 
+// Note: keep in sync with other languages
+pub global U256_LIMBS: u32 = 3;
+
+pub type U256 = BigNum<U256_LIMBS, 257, U256Params>;
+
 pub type EthAddress = Field;
 
 /// Walmart Aztec address
@@ -48,11 +54,9 @@ pub fn compute_wa_address(secret_key: Field) -> WaAddress {
     poseidon2_hash_with_separator([secret_key], GENERATOR_INDEX__WA_ADDRESS)
 }
 
-// TODO: use TokenAmount for `transfer` circuit
 pub struct TokenAmount {
     pub token: crate::EthAddress,
-    // TODO(security): use larger type for the amount
-    pub amount: u64,
+    pub amount: crate::U256,
 }
 
 pub struct TreeRoots {

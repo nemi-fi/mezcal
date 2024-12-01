@@ -3,7 +3,7 @@ use common::{EthAddress, WaAddress};
 fn main(
     owner: WaAddress,
     token: pub EthAddress,
-    value: pub u64,
+    value: pub common::U256,
     randomness: Field,
     note_hash: pub Field,
 ) {
