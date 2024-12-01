@@ -1,6 +1,6 @@
 import { utils } from "@repo/utils";
 import { ethers } from "ethers";
-import { keccak256ToFr } from "./RollupService";
+import { keccak256ToFr } from "../utils";
 
 export class EvmAccountService {
   readonly provider!: ethers.BrowserProvider;

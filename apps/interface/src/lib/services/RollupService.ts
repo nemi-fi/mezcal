@@ -15,6 +15,7 @@ import { utils } from "@repo/utils";
 import { ethers } from "ethers";
 import { compact, isEqual, orderBy, range, times } from "lodash-es";
 import { assert, type AsyncOrSync } from "ts-essentials";
+import { keccak256ToFr } from "../utils";
 import { EncryptionService } from "./EncryptionService";
 import { NonMembershipTree } from "./NonMembershipTree";
 
@@ -81,12 +82,12 @@ export class RollupService {
     const { Fr } = await import("@aztec/aztec.js");
     const randomness = Fr.random().toString();
     console.time("shield generateProof");
-    const note: ValueNote = {
+    const note = await ValueNote.from({
       owner: await CompleteWaAddress.fromSecretKey(secretKey),
       token: await ethers.resolveAddress(token),
       value: amount,
       randomness,
-    };
+    });
     const noteInput = await this.toNoteInput(note);
     const shieldCircuit = (await this.circuits).shield;
     const { witness } = await shieldCircuit.noir.execute({
@@ -123,17 +124,17 @@ export class RollupService {
 
     assert(utils.isAddressEqual(token, fromNote.token), "invalid token");
     const change_randomness = Fr.random().toString();
-    const changeNote: ValueNote = {
+    const changeNote = await ValueNote.from({
       token: fromNote.token,
       owner: fromNote.owner,
       value: fromNote.value - amount,
       randomness: change_randomness,
-    };
+    });
     assert(changeNote.value >= 0n, "invalid change note");
 
     const noteHashTree = await this.getNoteHashTree();
     const nullifierTree = await this.getNullifierTree();
-    const nullifier = await this.computeNullifier(fromNote, secretKey);
+    const nullifier = await fromNote.computeNullifier(secretKey);
 
     const unshieldCircuit = (await this.circuits).unshield;
     console.time("unshield generateProof");
@@ -150,7 +151,7 @@ export class RollupService {
       change_randomness,
       // return
       nullifier: nullifier.toString(),
-      change_note_hash: await this.hashNote(changeNote),
+      change_note_hash: await changeNote.hash(),
     });
     const { proof } = await unshieldCircuit.backend.generateProof(witness);
     console.timeEnd("unshield generateProof");
@@ -191,18 +192,18 @@ export class RollupService {
     const { proof } = await joinCircuit.backend.generateProof(witness);
     console.timeEnd("join generateProof");
 
-    const joinNote: ValueNote = {
+    const joinNote = await ValueNote.from({
       owner: await CompleteWaAddress.fromSecretKey(secretKey),
       token: notes[0]!.token,
       value: notes.reduce((acc, note) => acc + note.value, 0n),
       randomness: join_randomness,
-    };
+    });
 
     const tx = await this.contract.join(
       proof,
       (await Promise.all(
         notes.map(async (note) =>
-          (await this.computeNullifier(note, secretKey)).toString(),
+          (await note.computeNullifier(secretKey)).toString(),
         ),
       )) as any,
       await this.toNoteInput(joinNote),
@@ -225,7 +226,7 @@ export class RollupService {
     const { Fr } = await import("@aztec/aztec.js");
 
     const nullifierTree = await this.getNullifierTree();
-    const nullifier = await this.computeNullifier(fromNote, secretKey);
+    const nullifier = await fromNote.computeNullifier(secretKey);
 
     const noteHashTree = await this.getNoteHashTree();
     const to_randomness = Fr.random().toString();
@@ -242,19 +243,19 @@ export class RollupService {
       to_randomness,
       change_randomness,
     };
-    const changeNote: ValueNote = {
+    const changeNote = await ValueNote.from({
       token: fromNote.token,
       owner: fromNote.owner,
       value: fromNote.value - amount,
       randomness: change_randomness,
-    };
+    });
     assert(changeNote.value >= 0n, "invalid change note");
-    const toNote: ValueNote = {
+    const toNote = await ValueNote.from({
       token: fromNote.token,
       owner: to,
       value: amount,
       randomness: to_randomness,
-    };
+    });
     // console.log("input\n", JSON.stringify(input));
     const transferCircuit = (await this.circuits).transfer;
     console.time("transfer generateProof");
@@ -262,8 +263,8 @@ export class RollupService {
     {
       const expectedReturnValue = {
         nullifier: nullifier.toString(),
-        change_note_hash: await this.hashNote(changeNote),
-        to_note_hash: await this.hashNote(toNote),
+        change_note_hash: await changeNote.hash(),
+        to_note_hash: await toNote.hash(),
       };
       const patchedReturnValue = {
         ...(returnValue as any),
@@ -419,13 +420,15 @@ export class RollupService {
     };
     const notes_in = utils.arrayPadEnd(
       await Promise.all(
-        amountsIn.map((amount, i) =>
-          this.toNoteInput({
-            owner: to,
-            token: amount.token,
-            value: BigInt(amount.amount),
-            randomness: to_randomness[i]!,
-          }),
+        amountsIn.map(async (amount, i) =>
+          this.toNoteInput(
+            await ValueNote.from({
+              owner: to,
+              token: amount.token,
+              value: BigInt(amount.amount),
+              randomness: to_randomness[i]!,
+            }),
+          ),
         ),
       ),
       MAX_TOKENS_IN_PER_EXECUTION,
@@ -435,13 +438,13 @@ export class RollupService {
     const from = await CompleteWaAddress.fromSecretKey(fromSecretKey);
     const change_notes = utils.arrayPadEnd(
       await Promise.all(
-        notesOutNotPadded.map((note, i) => {
-          const changeNote = {
+        notesOutNotPadded.map(async (note, i) => {
+          const changeNote = await ValueNote.from({
             owner: from,
             token: note.token,
             value: BigInt(note.value) - BigInt(amounts_out[i]!.amount),
             randomness: change_randomness[i]!,
-          };
+          });
           assert(changeNote.value >= 0n, "change note value must be positive");
           return this.toNoteInput(changeNote);
         }),
@@ -452,7 +455,7 @@ export class RollupService {
     const nullifiers = utils.arrayPadEnd(
       await Promise.all(
         notesOutNotPadded.map(async (note) => {
-          return (await this.computeNullifier(note, fromSecretKey)).toString();
+          return (await note.computeNullifier(fromSecretKey)).toString();
         }),
       ),
       MAX_TOKENS_OUT_PER_EXECUTION,
@@ -500,13 +503,13 @@ export class RollupService {
 
   async toNoteConsumptionInputs(secretKey: string, note: ValueNote) {
     const { Fr } = await import("@aztec/aztec.js");
-    const nullifier = await this.computeNullifier(note, secretKey);
+    const nullifier = await note.computeNullifier(secretKey);
     const nullifierTree = await this.getNullifierTree();
     const nullifierNmWitness =
       await nullifierTree.getNonMembershipWitness(nullifier);
 
     const noteHashTree = await this.getNoteHashTree();
-    const noteHash = await this.hashNote(note);
+    const noteHash = await note.hash();
     const noteIndex = noteHashTree.findLeafIndex(
       new Fr(BigInt(noteHash)),
       INCLUDE_UNCOMMITTED,
@@ -688,52 +691,11 @@ export class RollupService {
     return noteHashTree;
   }
 
-  async hashNote(note: ValueNote) {
-    return (await poseidon2Hash(await serializeValueNote(note))).toString();
-  }
-
-  async encryptNote(note: ValueNote) {
-    const serialized = await serializeValueNote(note);
-    const hex = ethers.AbiCoder.defaultAbiCoder().encode(
-      times(serialized.length, () => "uint256"),
-      serialized,
-    );
-    return await this.encryption.encrypt(note.owner.publicKey, hex);
-  }
-
-  async decryptNote(
-    secretKey: string,
-    publicKey: string,
-    encryptedNote: string,
-  ) {
-    let hex: string;
-    try {
-      hex = await this.encryption.decrypt(secretKey, encryptedNote);
-    } catch (e) {
-      return undefined;
-    }
-    const fields = ethers.AbiCoder.defaultAbiCoder().decode(
-      times(await valueNoteSerializedLength(), () => "uint256"),
-      hex,
-    );
-    return await deserializeValueNote(fields, publicKey);
-  }
-
   async toNoteInput(note: ValueNote) {
     return {
-      noteHash: await this.hashNote(note),
-      encryptedNote: await this.encryptNote(note),
+      noteHash: await note.hash(),
+      encryptedNote: await note.encrypt(),
     };
-  }
-
-  async computeNoteNullifier(note: ValueNote, secretKey: string) {
-    return (
-      await poseidon2Hash([
-        GENERATOR_INDEX__NOTE_NULLIFIER,
-        await this.hashNote(note),
-        secretKey,
-      ])
-    ).toString();
   }
 
   private async getEmittedNotes(secretKey: string) {
@@ -745,20 +707,24 @@ export class RollupService {
       .flat();
     const publicKey = await this.encryption.derivePublicKey(secretKey);
     const decrypted = encrypted.map(async (encryptedNote) => {
-      const note = await this.decryptNote(secretKey, publicKey, encryptedNote);
+      const note = await ValueNote.tryDecrypt(
+        secretKey,
+        publicKey,
+        encryptedNote,
+      );
       if (!note) {
         return undefined;
       }
 
       const noteHashRolledUp: boolean =
-        (await this.contract.noteHashState(await this.hashNote(note))) ===
+        (await this.contract.noteHashState(await note.hash())) ===
         NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP;
       if (!noteHashRolledUp) {
         return undefined;
       }
 
       // if nullified
-      const nullifier = await this.computeNoteNullifier(note, secretKey);
+      const nullifier = (await note.computeNullifier(secretKey)).toString();
       const nullifierExists =
         (await this.contract.nullifierState(nullifier)) ===
         NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP;
@@ -799,21 +765,111 @@ export class RollupService {
     );
     return nullifierTree;
   }
+}
 
-  async computeNullifier(note: ValueNote, secretKey: string) {
+export class ValueNote {
+  constructor(
+    readonly owner: CompleteWaAddress,
+    readonly token: string,
+    readonly value: bigint,
+    readonly randomness: string,
+  ) {}
+
+  static async from(params: {
+    owner: CompleteWaAddress;
+    token: string;
+    value: bigint;
+    randomness: string;
+  }) {
+    return new ValueNote(
+      params.owner,
+      params.token,
+      params.value,
+      params.randomness,
+    );
+  }
+
+  async serialize(): Promise<bigint[]> {
+    return [
+      BigInt(this.owner.address),
+      BigInt(this.token),
+      BigInt(this.value),
+      BigInt(this.randomness),
+    ];
+  }
+
+  static async deserialize(
+    fields: bigint[],
+    publicKey: string,
+  ): Promise<ValueNote> {
+    const fieldsStr = fields.map((x) => ethers.toBeArray(x));
+    return new ValueNote(
+      new CompleteWaAddress(ethers.zeroPadValue(fieldsStr[0]!, 32), publicKey),
+      ethers.zeroPadValue(fieldsStr[1]!, 20),
+      fields[2]!,
+      ethers.zeroPadValue(fieldsStr[3]!, 32),
+    );
+  }
+
+  async hash() {
+    return (await poseidon2Hash(await this.serialize())).toString();
+  }
+
+  async computeNullifier(secretKey: string) {
+    assert(
+      (await CompleteWaAddress.fromSecretKey(secretKey)).equal(this.owner),
+      "invalid nullifier secret key",
+    );
     return await poseidon2Hash([
       GENERATOR_INDEX__NOTE_NULLIFIER,
-      await this.hashNote(note),
+      await this.hash(),
       secretKey,
     ]);
   }
-}
 
-export interface ValueNote {
-  owner: CompleteWaAddress;
-  token: string;
-  value: bigint;
-  randomness: string;
+  static async empty() {
+    return await ValueNote.from({
+      owner: new CompleteWaAddress(ethers.ZeroHash, ethers.ZeroHash),
+      token: ethers.ZeroHash,
+      value: 0n,
+      randomness: ethers.ZeroHash,
+    });
+  }
+
+  async encrypt() {
+    const serialized = await this.serialize();
+    const hex = ethers.AbiCoder.defaultAbiCoder().encode(
+      times(serialized.length, () => "uint256"),
+      serialized,
+    );
+    return await EncryptionService.getSingleton().encrypt(
+      this.owner.publicKey,
+      hex,
+    );
+  }
+
+  static async tryDecrypt(
+    secretKey: string,
+    publicKey: string,
+    encryptedNote: string,
+  ) {
+    const encryption = EncryptionService.getSingleton();
+    let hex: string;
+    try {
+      hex = await encryption.decrypt(secretKey, encryptedNote);
+    } catch (e) {
+      return undefined;
+    }
+    const fields = ethers.AbiCoder.defaultAbiCoder().decode(
+      times(await ValueNote.serializedLength(), () => "uint256"),
+      hex,
+    );
+    return await ValueNote.deserialize(fields, publicKey);
+  }
+
+  static async serializedLength() {
+    return (await (await ValueNote.empty()).serialize()).length;
+  }
 }
 
 export type WaAddress = string;
@@ -844,45 +900,13 @@ export class CompleteWaAddress {
       await EncryptionService.getSingleton().derivePublicKey(secretKey);
     return new CompleteWaAddress(address, publicKey);
   }
-}
 
-// TODO: refactor ValueNote into a class (or codegen from Noir if possible)
-export async function serializeValueNote(note: ValueNote): Promise<bigint[]> {
-  return [
-    BigInt(note.owner.address),
-    BigInt(note.token),
-    BigInt(note.value),
-    BigInt(note.randomness),
-  ];
-}
-
-async function deserializeValueNote(
-  fields: bigint[],
-  publicKey: string,
-): Promise<ValueNote> {
-  const fieldsStr = fields.map((x) => ethers.toBeArray(x));
-  return {
-    owner: {
-      address: ethers.zeroPadValue(fieldsStr[0]!, 32),
-      publicKey,
-    },
-    token: ethers.zeroPadValue(fieldsStr[1]!, 20),
-    value: fields[2]!,
-    randomness: ethers.zeroPadValue(fieldsStr[3]!, 32),
-  };
-}
-
-export async function emptyValueNote(): Promise<ValueNote> {
-  return {
-    owner: { address: ethers.ZeroHash, publicKey: ethers.ZeroHash },
-    token: ethers.ZeroHash,
-    value: 0n,
-    randomness: ethers.ZeroHash,
-  };
-}
-
-async function valueNoteSerializedLength() {
-  return (await serializeValueNote(await emptyValueNote())).length;
+  equal(other: CompleteWaAddress) {
+    return (
+      utils.isAddressEqual(this.address, other.address) &&
+      this.publicKey === other.publicKey
+    );
+  }
 }
 
 type NoirAndBackend = {
@@ -993,11 +1017,4 @@ function sortEvents<
     events,
     (e) => `${e.blockNumber}-${e.transactionIndex}-${e.index}`,
   );
-}
-
-export async function keccak256ToFr(value: string): Promise<Fr> {
-  const { Fr } = await import("@aztec/aztec.js");
-  const { truncateAndPad } = await import("@aztec/foundation/serialize");
-  const hash = ethers.keccak256(value);
-  return Fr.fromBuffer(truncateAndPad(Buffer.from(ethers.getBytes(hash))));
 }
