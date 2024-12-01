@@ -3,13 +3,12 @@ use crate::{EthAddress, WaAddress};
 pub struct ValueNote {
     pub owner: WaAddress,
     pub token: EthAddress,
-    // TODO(security): use U128 for value? Requires changing serialization logic
-    pub value: u64,
+    pub value: crate::U256,
     pub randomness: Field,
 }
 
 impl ValueNote {
-    // TODO: move to OwnedNote?
+    // TODO: remove this in favour of BoundedVec<ValueNote, MAX_LEN>
     pub fn is_set(self) -> bool {
         (self.owner != 0) & (self.token != 0)
     }
@@ -33,9 +32,9 @@ impl ValueNote {
     }
 }
 
-impl crate::Note<4> for ValueNote {
-    fn serialize(self) -> [Field; 4] {
-        [self.owner, self.token, self.value as Field, self.randomness]
+impl crate::Note<6> for ValueNote {
+    fn serialize(self) -> [Field; 6] {
+        [self.owner, self.token].concat(self.value.limbs).concat([self.randomness])
     }
 
     fn hash(self) -> Field {

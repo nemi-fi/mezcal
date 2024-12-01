@@ -13,7 +13,7 @@ fn main(
     from_note_inputs: common::NoteConsumptionInputs,
     // transfer params
     to: Field,
-    amount: u64,
+    amount: common::U256,
     to_randomness: Field,
     // change
     change_randomness: Field,

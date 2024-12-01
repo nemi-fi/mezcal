@@ -17,7 +17,7 @@ fn main(
         notes.map(|note| common::consume_owned_note(tree_roots, from_secret_key, note));
 
     let token = notes[0].note.token;
-    let mut joined_value = 0;
+    let mut joined_value = common::U256::new();
     for i in 0..MAX_NOTES_TO_JOIN {
         assert(notes[i].note.is_set(), "invalid note");
         assert_eq(notes[i].note.token, token, "invalid token");

@@ -42,7 +42,7 @@ fn main(
                     );
                     (change_note.hash(), nullifier)
                 } else {
-                    assert_eq(amount_out.amount, 0, f"invalid amount at {i}");
+                    assert_eq(amount_out.amount, common::U256::new(), f"invalid amount at {i}");
                     (0, 0)
                 }
             },
@@ -56,7 +56,7 @@ fn main(
 
     // emit new note hashes
     let note_hashes_in = amounts_in.enumerate().map(|(i, amount): (u32, common::TokenAmount)| {
-        if (amount.amount != 0) {
+        if (amount.amount != common::U256::new()) {
             common::ValueNote {
                 owner: to_address,
                 token: amount.token,

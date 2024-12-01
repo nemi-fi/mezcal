@@ -9,6 +9,18 @@ uint32 constant MAX_TOKENS_IN_PER_EXECUTION = 4;
 // Note: keep in sync with other languages
 uint32 constant MAX_TOKENS_OUT_PER_EXECUTION = 4;
 
+uint256 constant U256_LIMBS = 3;
+uint256 constant U256_CHUNK_SIZE = 120;
+
+function toNoirU256(uint256 value) pure returns (uint256[U256_LIMBS] memory) {
+    uint256[U256_LIMBS] memory limbs;
+    uint256 mask = (1 << U256_CHUNK_SIZE) - 1;
+    for (uint256 i = 0; i < limbs.length; i++) {
+        limbs[i] = (value / (1 << (i * U256_CHUNK_SIZE))) & mask;
+    }
+    return limbs;
+}
+
 function castAddressToBytes32(address x) pure returns (bytes32) {
     return bytes32(uint256(uint160(address(x))));
 }
@@ -61,6 +73,16 @@ library PublicInputs {
 
     function push(Type memory publicInputs, address value) internal pure {
         push(publicInputs, castAddressToBytes32(value));
+    }
+
+    function pushUint256Limbs(
+        Type memory publicInputs,
+        uint256 value
+    ) internal pure {
+        uint256[U256_LIMBS] memory limbs = toNoirU256(value);
+        for (uint256 i = 0; i < limbs.length; i++) {
+            push(publicInputs, limbs[i]);
+        }
     }
 
     function finish(

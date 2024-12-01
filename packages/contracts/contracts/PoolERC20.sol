@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Fr, FrLib, keccak256ToFr} from "./Fr.sol";
-import {NoteInput, TokenAmount, Call, Execution, MAX_TOKENS_IN_PER_EXECUTION, MAX_TOKENS_OUT_PER_EXECUTION, PublicInputs} from "./Utils.sol";
+import {NoteInput, TokenAmount, Call, Execution, MAX_TOKENS_IN_PER_EXECUTION, MAX_TOKENS_OUT_PER_EXECUTION, PublicInputs, U256_LIMBS} from "./Utils.sol";
 import {RouterERC20} from "./RouterERC20.sol";
 import {PoolGeneric} from "./PoolGeneric.sol";
 import {UltraVerifier as ShieldVerifier} from "../noir/target/shield.sol";
@@ -56,9 +56,9 @@ contract PoolERC20 is PoolGeneric {
     ) external {
         token.safeTransferFrom(msg.sender, address(this), amount);
 
-        PublicInputs.Type memory pi = PublicInputs.create(3);
+        PublicInputs.Type memory pi = PublicInputs.create(2 + U256_LIMBS);
         pi.push(address(token));
-        pi.push(amount);
+        pi.pushUint256Limbs(amount);
         pi.push(note.noteHash);
         require(
             _poolErc20Storage().shieldVerifier.verify(proof, pi.finish()),
@@ -81,14 +81,14 @@ contract PoolERC20 is PoolGeneric {
         bytes32 nullifier,
         NoteInput calldata changeNote
     ) external {
-        PublicInputs.Type memory pi = PublicInputs.create(7);
+        PublicInputs.Type memory pi = PublicInputs.create(6 + U256_LIMBS);
         // params
         pi.push(getNoteHashTree().root);
         pi.push(getNullifierTree().root);
         pi.push(to);
         pi.push(address(token));
-        pi.push(amount);
-        // return
+        pi.pushUint256Limbs(amount);
+        // result
         pi.push(nullifier);
         pi.push(changeNote.noteHash);
         require(
@@ -182,7 +182,7 @@ contract PoolERC20 is PoolGeneric {
                 // execution hashes
                 2 +
                 // amounts in & out
-                (2 *
+                ((1 + U256_LIMBS) *
                     (MAX_TOKENS_IN_PER_EXECUTION +
                         MAX_TOKENS_OUT_PER_EXECUTION)) +
                 // note hashes in
@@ -201,12 +201,12 @@ contract PoolERC20 is PoolGeneric {
         // amounts in
         for (uint256 i = 0; i < execution.amountsIn.length; i++) {
             pi.push(address(execution.amountsIn[i].token));
-            pi.push(bytes32(execution.amountsIn[i].amount));
+            pi.pushUint256Limbs(execution.amountsIn[i].amount);
         }
         // amounts out
         for (uint256 i = 0; i < execution.amountsOut.length; i++) {
             pi.push(address(execution.amountsOut[i].token));
-            pi.push(bytes32(execution.amountsOut[i].amount));
+            pi.pushUint256Limbs(execution.amountsOut[i].amount);
         }
         // note hashes in
         for (uint256 i = 0; i < noteInputs.length; i++) {
