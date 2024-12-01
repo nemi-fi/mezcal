@@ -16,9 +16,9 @@ fn main(
     execution_secret: Field,
     wrapped_execution_hash: pub Field,
     // amounts & notes
-    amounts_in: pub [TokenAmount; common::MAX_TOKENS_IN_PER_EXECUTION],
+    amounts_in: pub [common::TokenAmount; common::MAX_TOKENS_IN_PER_EXECUTION],
     to_randomness: [Field; common::MAX_TOKENS_IN_PER_EXECUTION],
-    amounts_out: pub [TokenAmount; common::MAX_TOKENS_OUT_PER_EXECUTION],
+    amounts_out: pub [common::TokenAmount; common::MAX_TOKENS_OUT_PER_EXECUTION],
     notes_out: [common::NoteConsumptionInputs; common::MAX_TOKENS_OUT_PER_EXECUTION],
     change_randomness: [Field; common::MAX_TOKENS_OUT_PER_EXECUTION],
 ) -> pub Result {
@@ -35,19 +35,14 @@ fn main(
             |(i, note_input): (u32, common::NoteConsumptionInputs)| {
                 let amount_out = amounts_out[i];
                 if (note_input.note.is_set()) {
-                    assert_eq(note_input.note.token, amount_out.token, f"invalid token at {i}");
-                    let nullifier = common::consume_owned_note(
+                    let (nullifier, change_note) = common::ValueNote::consume_and_sub(
+                        note_input,
+                        amount_out,
+                        change_randomness[i],
                         note_hash_tree_root,
                         nullifier_tree_root,
                         from_secret_key,
-                        note_input,
                     );
-                    let change_note = common::ValueNote {
-                        owner: note_input.note.owner,
-                        token: note_input.note.token,
-                        value: note_input.note.value - amount_out.amount,
-                        randomness: change_randomness[note_input.note_index],
-                    };
                     (change_note.hash(), nullifier)
                 } else {
                     assert_eq(amount_out.amount, 0, f"invalid amount at {i}");
@@ -63,7 +58,7 @@ fn main(
     };
 
     // emit new note hashes
-    let note_hashes_in = amounts_in.enumerate().map(|(i, amount): (u32, TokenAmount)| {
+    let note_hashes_in = amounts_in.enumerate().map(|(i, amount): (u32, common::TokenAmount)| {
         if (amount.amount != 0) {
             common::ValueNote {
                 owner: to_address,
@@ -78,11 +73,4 @@ fn main(
     });
 
     Result { note_hashes_in, change_note_hashes, nullifiers_out }
-}
-
-// TODO: use TokenAmount for `transfer` circuit
-struct TokenAmount {
-    token: common::EthAddress,
-    // TODO(security): use larger type for the amount
-    amount: u64,
 }

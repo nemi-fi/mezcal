@@ -21,19 +21,14 @@ fn main(
     // change
     change_randomness: Field,
 ) -> pub Result {
-    let nullifier = common::consume_owned_note(
+    let (nullifier, change_note) = common::ValueNote::consume_and_sub(
+        from_note_inputs,
+        common::TokenAmount { token: from_note_inputs.note.token, amount: amount },
+        change_randomness,
         note_hash_tree_root,
         nullifier_tree_root,
         from_secret_key,
-        from_note_inputs,
     );
-
-    let change_note = ValueNote {
-        owner: from_note_inputs.note.owner,
-        token: from_note_inputs.note.token,
-        value: from_note_inputs.note.value - amount,
-        randomness: change_randomness,
-    };
     let to_note = ValueNote {
         owner: to,
         token: from_note_inputs.note.token,

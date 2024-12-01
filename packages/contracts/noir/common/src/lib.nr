@@ -47,3 +47,10 @@ pub fn compute_wa_address(secret_key: Field) -> WaAddress {
     // TODO(security): wtf is this? Use an actual private/public key cryptography
     poseidon2_hash_with_separator([secret_key], GENERATOR_INDEX__WA_ADDRESS)
 }
+
+// TODO: use TokenAmount for `transfer` circuit
+pub struct TokenAmount {
+    pub token: crate::EthAddress,
+    // TODO(security): use larger type for the amount
+    pub amount: u64,
+}

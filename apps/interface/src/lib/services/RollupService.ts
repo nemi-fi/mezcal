@@ -145,9 +145,11 @@ export class RollupService {
       nullifier_tree_root: nullifierTree.getRoot(),
       from_secret_key: secretKey,
       from_note_inputs: await this.toNoteConsumptionInputs(secretKey, fromNote),
-      token,
       to,
-      amount: amount.toString(),
+      amount: {
+        amount: amount.toString(),
+        token,
+      },
       change_randomness,
       // return
       nullifier: nullifier.toString(),

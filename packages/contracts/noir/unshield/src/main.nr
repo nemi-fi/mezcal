@@ -11,27 +11,21 @@ fn main(
     from_secret_key: Field,
     from_note_inputs: common::NoteConsumptionInputs,
     // to params
-    token: pub common::EthAddress,
     to: pub common::EthAddress,
-    amount: pub u64,
+    amount: pub common::TokenAmount,
     // change
     change_randomness: Field,
 ) -> pub Result {
-    assert_eq(token, from_note_inputs.note.token, "invalid token");
+    assert_eq(amount.token, from_note_inputs.note.token, "invalid token");
 
-    let nullifier = common::consume_owned_note(
+    let (nullifier, change_note) = common::ValueNote::consume_and_sub(
+        from_note_inputs,
+        amount,
+        change_randomness,
         note_hash_tree_root,
         nullifier_tree_root,
         from_secret_key,
-        from_note_inputs,
     );
-
-    let change_note = common::ValueNote {
-        owner: from_note_inputs.note.owner,
-        token: from_note_inputs.note.token,
-        value: from_note_inputs.note.value - amount,
-        randomness: change_randomness,
-    };
 
     Result { nullifier, change_note_hash: change_note.hash() }
 }
