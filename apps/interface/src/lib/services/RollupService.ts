@@ -343,12 +343,12 @@ export class RollupService {
       token: ethers.ZeroAddress,
       amount: "0",
     };
-    const amounts_in = arrayPadEnd(
+    const amounts_in = utils.arrayPadEnd(
       amountsIn,
       MAX_TOKENS_IN_PER_EXECUTION,
       emptyTokenAmount,
     );
-    const amounts_out = arrayPadEnd(
+    const amounts_out = utils.arrayPadEnd(
       amountsOut,
       MAX_TOKENS_OUT_PER_EXECUTION,
       emptyTokenAmount,
@@ -386,7 +386,7 @@ export class RollupService {
     const change_randomness = times(MAX_TOKENS_OUT_PER_EXECUTION, () =>
       Fr.random().toString(),
     );
-    const notes_out_consumption_inputs = arrayPadEnd(
+    const notes_out_consumption_inputs = utils.arrayPadEnd(
       await Promise.all(
         notesOutNotPadded.map((note) =>
           this.toNoteConsumptionInputs(fromSecretKey, note),
@@ -417,7 +417,7 @@ export class RollupService {
       noteHash: ethers.ZeroHash,
       encryptedNote: ethers.ZeroHash,
     };
-    const notes_in = arrayPadEnd(
+    const notes_in = utils.arrayPadEnd(
       await Promise.all(
         amountsIn.map((amount, i) =>
           this.toNoteInput({
@@ -433,7 +433,7 @@ export class RollupService {
     );
 
     const from = await this.computeCompleteWaAddress(fromSecretKey);
-    const change_notes = arrayPadEnd(
+    const change_notes = utils.arrayPadEnd(
       await Promise.all(
         notesOutNotPadded.map((note, i) => {
           const changeNote = {
@@ -449,7 +449,7 @@ export class RollupService {
       MAX_TOKENS_OUT_PER_EXECUTION,
       emptyNoteInput,
     );
-    const nullifiers = arrayPadEnd(
+    const nullifiers = utils.arrayPadEnd(
       await Promise.all(
         notesOutNotPadded.map(async (note) => {
           return (await this.computeNullifier(note, fromSecretKey)).toString();
@@ -659,12 +659,12 @@ export class RollupService {
     }
     return {
       txIndices: batch.txIndices,
-      noteHashes: arrayPadEnd(
+      noteHashes: utils.arrayPadEnd(
         batch.noteHashes,
         MAX_NOTES_PER_ROLLUP,
         ethers.ZeroHash,
       ),
-      nullifiers: arrayPadEnd(
+      nullifiers: utils.arrayPadEnd(
         batch.nullifiers,
         MAX_NULLIFIERS_PER_ROLLUP,
         ethers.ZeroHash,
@@ -993,19 +993,6 @@ function sortEvents<
     events,
     (e) => `${e.blockNumber}-${e.transactionIndex}-${e.index}`,
   );
-}
-
-export function arrayPadEnd<T>(
-  array: T[],
-  targetLength: number,
-  padValue: T,
-): T[] {
-  assert(array.length <= targetLength, "arrayPadEnd: array too long");
-  const newArray = array.slice();
-  while (newArray.length < targetLength) {
-    newArray.push(padValue);
-  }
-  return newArray;
 }
 
 export async function keccak256ToFr(value: string): Promise<Fr> {
