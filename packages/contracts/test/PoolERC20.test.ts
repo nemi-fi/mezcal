@@ -1,7 +1,8 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers, noir, typedDeployments } from "hardhat";
-import { sdk as interfaceSdk } from "../sdk";
+import type { sdk as interfaceSdk } from "../sdk";
+import type { createBackendSdk } from "../sdk/backendSdk";
 import { parseUnits, snapshottedBeforeEach } from "../shared/utils";
 import {
   IERC20__factory,
@@ -27,7 +28,7 @@ describe("PoolERC20", () => {
   let usdc: MockERC20;
   let btc: MockERC20;
   let sdk: ReturnType<typeof interfaceSdk.createInterfaceSdk>;
-  let backendSdk: ReturnType<typeof interfaceSdk.createBackendSdk>;
+  let backendSdk: ReturnType<typeof createBackendSdk>;
   let CompleteWaAddress: typeof import("../sdk").sdk.CompleteWaAddress;
   snapshottedBeforeEach(async () => {
     [alice, bob, charlie] = await ethers.getSigners();
@@ -52,6 +53,10 @@ describe("PoolERC20", () => {
       "../sdk",
       __filename,
     )) as typeof import("../sdk");
+    const { createBackendSdk } = (await tsImport(
+      "../sdk/backendSdk",
+      __filename,
+    )) as typeof import("../sdk/backendSdk");
 
     const coreSdk = interfaceSdk.createCoreSdk(pool);
 
@@ -64,7 +69,7 @@ describe("PoolERC20", () => {
       execute: noir.getCircuitJson("execute"),
     });
 
-    backendSdk = interfaceSdk.createBackendSdk(coreSdk, trees, {
+    backendSdk = createBackendSdk(coreSdk, trees, {
       rollup: noir.getCircuitJson("rollup"),
     });
 
