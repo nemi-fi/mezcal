@@ -6,27 +6,28 @@ import type { AsyncOrSync } from "ts-essentials";
 import type { PoolERC20 } from "../typechain-types/index.js";
 import { EncryptionService } from "./EncryptionService.js";
 import { NativeUltraPlonkBackend } from "./NativeUltraPlonkBackend.js";
+import { type ITreesService } from "./RemoteTreesService.js";
 import { RollupService } from "./RollupOnlyService.js";
 import { PoolErc20Service } from "./RollupService.js";
 import { TreesService } from "./TreesService.js";
 
 export * from "./EncryptionService.js";
 export * from "./NonMembershipTree.js";
+export * from "./RemoteTreesService.js";
 export * from "./RollupService.js";
 export * from "./TreesService.js";
 
 export function createCoreSdk(contract: PoolERC20) {
-  const trees = new TreesService(contract);
   const encryption = EncryptionService.getSingleton();
   return {
     contract,
-    trees,
     encryption,
   };
 }
 
 export function createInterfaceSdk(
   coreSdk: ReturnType<typeof createCoreSdk>,
+  trees: ITreesService,
   compiledCircuits: Record<
     "shield" | "unshield" | "join" | "transfer" | "execute",
     AsyncOrSync<CompiledCircuit>
@@ -38,7 +39,7 @@ export function createInterfaceSdk(
   const poolErc20 = new PoolErc20Service(
     coreSdk.contract,
     coreSdk.encryption,
-    coreSdk.trees,
+    trees,
     circuits,
   );
 
@@ -49,9 +50,10 @@ export function createInterfaceSdk(
 
 export function createBackendSdk(
   coreSdk: ReturnType<typeof createCoreSdk>,
+  trees: TreesService,
   compiledCircuits: Record<"rollup", AsyncOrSync<CompiledCircuit>>,
 ) {
-  const rollup = new RollupService(coreSdk.contract, coreSdk.trees, {
+  const rollup = new RollupService(coreSdk.contract, trees, {
     rollup: utils.iife(async () => {
       const { Noir } = await import("@noir-lang/noir_js");
       const noir = new Noir(await compiledCircuits.rollup);

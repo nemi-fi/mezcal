@@ -17,7 +17,8 @@ const PAGES = {
  * SERVERS
  */
 const SERVERS = {
-  "POST /api/rollup": `/api/rollup`
+  "POST /api/rollup": `/api/rollup`,
+  "POST /api/trees": `/api/trees`
 }
 
 /**
@@ -132,7 +133,7 @@ export function route<T extends keyof AllTypes>(key: T, ...params: any[]): strin
 */
 export type KIT_ROUTES = {
   PAGES: { '/': never, '/connect': never }
-  SERVERS: { 'POST /api/rollup': never }
+  SERVERS: { 'POST /api/rollup': never, 'POST /api/trees': never }
   ACTIONS: Record<string, never>
   LINKS: Record<string, never>
   Params: Record<string, never>

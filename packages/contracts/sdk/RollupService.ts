@@ -8,7 +8,7 @@ import { assert, type AsyncOrSync } from "ts-essentials";
 import { PoolERC20__factory, type PoolERC20 } from "../typechain-types";
 import type { ExecutionStruct } from "../typechain-types/contracts/PoolERC20";
 import { EncryptionService } from "./EncryptionService";
-import type { TreesService } from "./TreesService";
+import type { ITreesService } from "./RemoteTreesService";
 import { fromNoirU256, keccak256ToFr, toNoirU256, U256_LIMBS } from "./utils";
 
 // Note: keep in sync with other languages
@@ -50,7 +50,7 @@ export class PoolErc20Service {
   constructor(
     readonly contract: PoolERC20,
     private encryption: EncryptionService,
-    private trees: TreesService,
+    private trees: ITreesService,
     private circuits: AsyncOrSync<{
       shield: NoirAndBackend;
       unshield: NoirAndBackend;
@@ -497,32 +497,17 @@ export class PoolErc20Service {
   }
 
   async toNoteConsumptionInputs(secretKey: string, note: ValueNote) {
-    const { Fr } = await import("@aztec/aztec.js");
     const nullifier = await note.computeNullifier(secretKey);
-    const nullifierTree = await this.trees.getNullifierTree();
-    const nullifierNmWitness =
-      await nullifierTree.getNonMembershipWitness(nullifier);
-
-    const noteHashTree = await this.trees.getNoteHashTree();
-    const noteHash = await note.hash();
-    const noteIndex = noteHashTree.findLeafIndex(
-      new Fr(BigInt(noteHash)),
-      INCLUDE_UNCOMMITTED,
-    );
-    assert(noteIndex != null, "note not found");
+    const noteConsumptionInputs = await this.trees.getNoteConsumptionInputs({
+      noteHash: await note.hash(),
+      nullifier: nullifier.toString(),
+    });
     return {
+      ...noteConsumptionInputs,
       note: await note.toNoir(),
-      note_sibling_path: (
-        await noteHashTree.getSiblingPath(noteIndex, INCLUDE_UNCOMMITTED)
-      )
-        .toTuple()
-        .map((x: Fr) => x.toString()),
-      note_index: ethers.toQuantity(noteIndex),
-      nullifier_low_leaf_preimage: nullifierNmWitness.low_leaf_preimage,
-      nullifier_low_leaf_membership_witness:
-        nullifierNmWitness.low_leaf_membership_witness,
     };
   }
+
   async toNoteInput(note: ValueNote) {
     return {
       noteHash: await note.hash(),
@@ -756,7 +741,7 @@ export type NoirAndBackend = {
 export async function poseidon2Hash(inputs: (bigint | string | number)[]) {
   // @ts-ignore hardhat does not support ESM
   const { poseidon2Hash } = await import("@aztec/foundation/crypto");
-  return poseidon2Hash(inputs.map((x) => BigInt(x)));
+  return poseidon2Hash(inputs.map((x) => BigInt(x))) as Fr;
 }
 
 function sortEvents<
