@@ -1,14 +1,10 @@
-import type { UltraPlonkBackend } from "@aztec/bb.js";
-import { utils } from "@repo/utils";
 import { ethers } from "ethers";
 import { mapValues } from "lodash-es";
 import type { AsyncOrSync } from "ts-essentials";
 import type { PoolERC20 } from "../typechain-types/index.js";
 import { EncryptionService } from "./EncryptionService.js";
 import { type ITreesService } from "./RemoteTreesService.js";
-import { RollupService } from "./RollupOnlyService.js";
 import { PoolErc20Service } from "./RollupService.js";
-import { TreesService } from "./TreesService.js";
 
 export * from "./EncryptionService.js";
 export * from "./NonMembershipTree.js";

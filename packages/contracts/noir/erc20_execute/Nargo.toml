@@ -1,8 +1,9 @@
 [package]
-name = "transfer"
+name = "erc20_execute"
 type = "bin"
 authors = ["Oleh Misarosh <olehmisar@gmail.com>"]
 compiler_version = ">=0.39.0"
 
 [dependencies]
+nodash = { tag = "v0.39.1", git = "https://github.com/olehmisar/nodash/" }
 common = { path = "../common" }

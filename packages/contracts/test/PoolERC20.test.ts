@@ -62,11 +62,11 @@ describe("PoolERC20", () => {
 
     const trees = new interfaceSdk.TreesService(pool);
     sdk = interfaceSdk.createInterfaceSdk(coreSdk, trees, {
-      shield: noir.getCircuitJson("shield"),
-      unshield: noir.getCircuitJson("unshield"),
-      join: noir.getCircuitJson("join"),
-      transfer: noir.getCircuitJson("transfer"),
-      execute: noir.getCircuitJson("execute"),
+      shield: noir.getCircuitJson("erc20_shield"),
+      unshield: noir.getCircuitJson("erc20_unshield"),
+      join: noir.getCircuitJson("erc20_join"),
+      transfer: noir.getCircuitJson("erc20_transfer"),
+      execute: noir.getCircuitJson("erc20_execute"),
     });
 
     backendSdk = createBackendSdk(coreSdk, trees, {

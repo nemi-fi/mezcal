@@ -1,10 +1,10 @@
 [workspace]
 members = [
-  "shield",
-  "unshield",
-  "join",
-  "transfer",
-  "execute",
+  "erc20_shield",
+  "erc20_unshield",
+  "erc20_join",
+  "erc20_transfer",
+  "erc20_execute",
   "rollup",
   "common",
 ]
