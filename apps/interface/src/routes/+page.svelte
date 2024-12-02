@@ -54,11 +54,21 @@
           const secretKey = await lib.evm.getSecretKey(signer);
           const balances = await Promise.all(
             lib.currencyList.currencies.map(async (token) => {
-              const balance = await lib.poolErc20.balanceOf(
+              const [balanceRaw, notesRaw] = await lib.poolErc20.balanceOfNew(
                 token.address,
                 secretKey,
               );
-              return CurrencyAmount.fromRawAmount(token, balance.toString());
+              const balance = CurrencyAmount.fromRawAmount(
+                token,
+                balanceRaw.toString(),
+              );
+              const fractions = notesRaw.map((note) =>
+                CurrencyAmount.fromRawAmount(
+                  token,
+                  note.amount.amount.toString(),
+                ),
+              );
+              return { balance, fractions };
             }),
           );
           return balances;
@@ -158,7 +168,31 @@
     <Ui.Card.Content>
       <Ui.Query query={$shieldedBalances}>
         {#snippet success(data)}
-          {@render balancesBlock(data)}
+          <!-- {@render balancesBlock(data)} -->
+          <div class="flex flex-col gap-2">
+            {#each data as balance}
+              <div class="flex gap-2">
+                <div class="flex-1">
+                  <span class="text-sm font-bold">
+                    {balance.balance.currency.symbol}
+                  </span>
+                </div>
+                <div class="flex-1">
+                  <span class="text-lg font-bold">
+                    {balance.balance.toExact()}
+                    {#if balance.fractions.length > 1}
+                      {#each balance.fractions as fraction, i}
+                        {#if i > 0}
+                          +
+                        {/if}
+                        ({fraction.toExact()})
+                      {/each}
+                    {/if}
+                  </span>
+                </div>
+              </div>
+            {/each}
+          </div>
         {/snippet}
       </Ui.Query>
 

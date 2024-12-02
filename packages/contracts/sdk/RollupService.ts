@@ -292,6 +292,13 @@ export class PoolErc20Service {
     };
   }
 
+  async balanceOfNew(token: ethers.AddressLike, secretKey: string) {
+    const notes = await this.getBalanceNotesOf(token, secretKey);
+    const balance = notes.reduce((acc, note) => acc + note.amount.amount, 0n);
+    return [balance, notes] as const;
+  }
+
+  /** @deprecated use .balanceOfNew */
   async balanceOf(token: ethers.AddressLike, secretKey: string) {
     const notes = await this.getBalanceNotesOf(token, secretKey);
     return notes.reduce((acc, note) => acc + note.amount.amount, 0n);
