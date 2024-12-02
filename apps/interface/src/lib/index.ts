@@ -8,6 +8,7 @@ import { ethers } from "ethers";
 import { ReownService } from "./reown.js";
 import { EvmAccountService } from "./services/EvmAccountService.svelte.js";
 import { QueriesService } from "./services/QueriesService.svelte.js";
+import { route } from "./ROUTES.js";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -43,7 +44,8 @@ const contract = PoolERC20__factory.connect(
   relayer,
 );
 const coreSdk = sdk.createCoreSdk(contract);
-const interfaceSdk = sdk.createInterfaceSdk(coreSdk, {
+const trees = new sdk.RemoteTreesService(route("POST /api/trees"));
+const interfaceSdk = sdk.createInterfaceSdk(coreSdk, trees, {
   shield: import("@repo/contracts/noir/target/shield.json"),
   unshield: import("@repo/contracts/noir/target/unshield.json"),
   join: import("@repo/contracts/noir/target/join.json"),

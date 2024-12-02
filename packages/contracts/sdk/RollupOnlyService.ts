@@ -26,14 +26,14 @@ export class RollupService {
   async rollup() {
     const { Fr } = await import("@aztec/aztec.js");
 
+    const { noteHashTree, nullifierTree } = await this.trees.getTrees();
     const pending = await this.selectTxsToRollup();
     const pendingNoteHashes = pending.noteHashes.map((h) => new Fr(BigInt(h)));
     const pendingNullifiers = pending.nullifiers.map((h) => new Fr(BigInt(h)));
     const noteHashTreeInput = await getInsertTreeInput(
-      await this.trees.getNoteHashTree(),
+      noteHashTree,
       pendingNoteHashes,
     );
-    const nullifierTree = await this.trees.getNullifierTree();
     const nullifierTreeInput = await getInsertTreeInput(
       nullifierTree._tree,
       pendingNullifiers.map((n) => n.toBuffer()),

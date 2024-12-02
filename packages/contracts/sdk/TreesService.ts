@@ -3,6 +3,7 @@ import type { StandardTree } from "@aztec/merkle-tree";
 import { ethers } from "ethers";
 import { isEqual, orderBy, range, times } from "lodash-es";
 import { assert } from "ts-essentials";
+import { z } from "zod";
 import type { PoolERC20 } from "../typechain-types";
 import { NonMembershipTree } from "./NonMembershipTree";
 import {
@@ -16,16 +17,58 @@ import {
 export class TreesService {
   constructor(private contract: PoolERC20) {}
 
-  async getTreeRoots() {
-    const noteHashTree = await this.getNoteHashTree();
-    const nullifierTree = await this.getNullifierTree();
-    return {
-      note_hash_root: ethers.hexlify(noteHashTree.getRoot(INCLUDE_UNCOMMITTED)),
-      nullifier_root: nullifierTree.getRoot(),
-    };
+  getTreeRoots = z
+    .function()
+    .args()
+    .implement(async () => {
+      const { noteHashTree, nullifierTree } = await this.getTrees();
+      return {
+        note_hash_root: ethers.hexlify(
+          noteHashTree.getRoot(INCLUDE_UNCOMMITTED),
+        ),
+        nullifier_root: nullifierTree.getRoot(),
+      };
+    });
+
+  // TODO(privacy): this reveals link between noteHash and nullifier to the backend. Can we move this to frontend or put backend inside a TEE?
+  getNoteConsumptionInputs = z
+    .function()
+    .args(z.object({ noteHash: z.string(), nullifier: z.string() }))
+    .implement(async (params) => {
+      const { Fr } = await import("@aztec/aztec.js");
+
+      const { noteHashTree, nullifierTree } = await this.getTrees();
+
+      const nullifierNmWitness = await nullifierTree.getNonMembershipWitness(
+        new Fr(BigInt(params.nullifier)),
+      );
+
+      const noteIndex = noteHashTree.findLeafIndex(
+        new Fr(BigInt(params.noteHash)),
+        INCLUDE_UNCOMMITTED,
+      );
+      assert(noteIndex != null, "note not found");
+      return {
+        note_sibling_path: (
+          await noteHashTree.getSiblingPath(noteIndex, INCLUDE_UNCOMMITTED)
+        )
+          .toTuple()
+          .map((x: Fr) => x.toString()),
+        note_index: ethers.toQuantity(noteIndex),
+        nullifier_low_leaf_preimage: nullifierNmWitness.low_leaf_preimage,
+        nullifier_low_leaf_membership_witness:
+          nullifierNmWitness.low_leaf_membership_witness,
+      };
+    });
+
+  async getTrees() {
+    return await ethers.resolveProperties({
+      noteHashTree: this.#getNoteHashTree(),
+      nullifierTree: this.#getNullifierTree(),
+    });
   }
 
-  async getNoteHashTree() {
+  async #getNoteHashTree() {
     const { Fr } = await import("@aztec/aztec.js");
     const noteHashes = sortEventsWithIndex(
       await this.contract.queryFilter(this.contract.filters.NoteHashes()),
@@ -41,7 +84,7 @@ export class TreesService {
     return noteHashTree;
   }
 
-  async getNullifierTree() {
+  async #getNullifierTree() {
     const { Fr } = await import("@aztec/aztec.js");
 
     const nullifiers = sortEventsWithIndex(

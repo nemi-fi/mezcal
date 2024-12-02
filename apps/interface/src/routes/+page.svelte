@@ -1,5 +1,6 @@
 <script lang="ts">
   import { lib } from "$lib";
+  import SendForm from "$lib/components/SendForm.svelte";
   import ShieldForm from "$lib/components/ShieldForm.svelte";
   import { sdk } from "@repo/contracts/sdk";
   import {
@@ -158,6 +159,16 @@
       </Ui.Query>
 
       <ShieldForm />
+    </Ui.Card.Content>
+  </Ui.Card.Root>
+
+  <Ui.Card.Root>
+    <Ui.Card.Header>
+      <Ui.Card.Title>Send</Ui.Card.Title>
+    </Ui.Card.Header>
+
+    <Ui.Card.Content>
+      <SendForm />
     </Ui.Card.Content>
   </Ui.Card.Root>
 </Ui.GapContainer>
