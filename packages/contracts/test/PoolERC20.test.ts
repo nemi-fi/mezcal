@@ -27,6 +27,7 @@ describe("PoolERC20", () => {
   let usdc: MockERC20;
   let btc: MockERC20;
   let sdk: ReturnType<typeof interfaceSdk.createInterfaceSdk>;
+  let backendSdk: ReturnType<typeof interfaceSdk.createBackendSdk>;
   let CompleteWaAddress: typeof import("../sdk").sdk.CompleteWaAddress;
   snapshottedBeforeEach(async () => {
     [alice, bob, charlie] = await ethers.getSigners();
@@ -52,16 +53,21 @@ describe("PoolERC20", () => {
       __filename,
     )) as typeof import("../sdk");
 
-    sdk = interfaceSdk.createInterfaceSdk(pool, {
+    const coreSdk = interfaceSdk.createCoreSdk(pool);
+
+    sdk = interfaceSdk.createInterfaceSdk(coreSdk, {
       shield: noir.getCircuitJson("shield"),
       unshield: noir.getCircuitJson("unshield"),
       join: noir.getCircuitJson("join"),
       transfer: noir.getCircuitJson("transfer"),
       execute: noir.getCircuitJson("execute"),
+    });
+
+    backendSdk = interfaceSdk.createBackendSdk(coreSdk, {
       rollup: noir.getCircuitJson("rollup"),
     });
 
-    console.log("roots", await sdk.trees.getTreeRoots());
+    console.log("roots", await coreSdk.trees.getTreeRoots());
   });
 
   it("shields", async () => {
@@ -73,7 +79,7 @@ describe("PoolERC20", () => {
       secretKey: aliceSecretKey,
     });
 
-    await sdk.rollup.rollup();
+    await backendSdk.rollup.rollup();
     expect(
       await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey),
     ).to.deep.equal([note]);
@@ -96,7 +102,7 @@ describe("PoolERC20", () => {
       amount: 200n,
       secretKey: aliceSecretKey,
     });
-    await sdk.rollup.rollup();
+    await backendSdk.rollup.rollup();
     expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(300n);
 
     await sdk.poolErc20.shield({
@@ -105,7 +111,7 @@ describe("PoolERC20", () => {
       amount: 300n,
       secretKey: aliceSecretKey,
     });
-    await sdk.rollup.rollup();
+    await backendSdk.rollup.rollup();
     expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(600n);
   });
 
@@ -118,7 +124,7 @@ describe("PoolERC20", () => {
       amount,
       secretKey: aliceSecretKey,
     });
-    await sdk.rollup.rollup();
+    await backendSdk.rollup.rollup();
     expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(
       amount,
     );
@@ -138,7 +144,7 @@ describe("PoolERC20", () => {
     expect(await usdc.balanceOf(bob)).to.eq(unshieldAmount);
     expect(await usdc.balanceOf(pool)).to.equal(amount - unshieldAmount);
 
-    await sdk.rollup.rollup();
+    await backendSdk.rollup.rollup();
 
     expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(
       amount - unshieldAmount,
@@ -160,7 +166,7 @@ describe("PoolERC20", () => {
       amount: amount1,
       secretKey: aliceSecretKey,
     });
-    await sdk.rollup.rollup();
+    await backendSdk.rollup.rollup();
     expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(
       amount0 + amount1,
     ); // sanity check
@@ -171,7 +177,7 @@ describe("PoolERC20", () => {
       secretKey: aliceSecretKey,
       notes,
     });
-    await sdk.rollup.rollup();
+    await backendSdk.rollup.rollup();
 
     expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(
       amount0 + amount1,
@@ -190,7 +196,7 @@ describe("PoolERC20", () => {
       amount,
       secretKey: aliceSecretKey,
     });
-    await sdk.rollup.rollup();
+    await backendSdk.rollup.rollup();
 
     // interact
     const [note] = await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey);
@@ -218,7 +224,7 @@ describe("PoolERC20", () => {
       ],
     ]);
 
-    await sdk.rollup.rollup();
+    await backendSdk.rollup.rollup();
 
     expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(
       amount - transferAmount,
@@ -235,7 +241,7 @@ describe("PoolERC20", () => {
       amount: 100n,
       secretKey: aliceSecretKey,
     });
-    await sdk.rollup.rollup();
+    await backendSdk.rollup.rollup();
     const [shieldedNote] = await sdk.poolErc20.getBalanceNotesOf(
       usdc,
       aliceSecretKey,
@@ -254,7 +260,7 @@ describe("PoolERC20", () => {
     //   to: await sdk.poolErc20.computeWaAddress(charlieSecretKey),
     //   amount: 10n,
     // });
-    await sdk.rollup.rollup();
+    await backendSdk.rollup.rollup();
     const [bobNote] = await sdk.poolErc20.getBalanceNotesOf(usdc, bobSecretKey);
 
     await sdk.poolErc20.transfer({
@@ -263,7 +269,7 @@ describe("PoolERC20", () => {
       to: await CompleteWaAddress.fromSecretKey(charlieSecretKey),
       amount: 10n,
     });
-    await sdk.rollup.rollup();
+    await backendSdk.rollup.rollup();
 
     expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(
       100n - 30n,
@@ -289,7 +295,7 @@ describe("PoolERC20", () => {
       amount: initialBalance,
       secretKey: aliceSecretKey,
     });
-    await sdk.rollup.rollup();
+    await backendSdk.rollup.rollup();
     const [shieldedNote] = await sdk.poolErc20.getBalanceNotesOf(
       usdc,
       aliceSecretKey,
@@ -336,7 +342,7 @@ describe("PoolERC20", () => {
       ],
       calls,
     });
-    await sdk.rollup.rollup();
+    await backendSdk.rollup.rollup();
 
     expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.eq(
       initialBalance - amountOut,
@@ -354,7 +360,7 @@ describe("PoolERC20", () => {
       amount,
       secretKey: aliceSecretKey,
     });
-    await sdk.rollup.rollup();
+    await backendSdk.rollup.rollup();
 
     const [note] = await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey);
     await sdk.poolErc20.transfer({
@@ -392,7 +398,7 @@ describe("PoolERC20", () => {
     expect(
       await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey),
     ).to.deep.equal([]);
-    await sdk.rollup.rollup();
+    await backendSdk.rollup.rollup();
     expect(
       await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey),
     ).to.deep.equal([note]);
@@ -406,7 +412,7 @@ describe("PoolERC20", () => {
     expect(
       await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey),
     ).to.deep.equal([note]); // still exists
-    await sdk.rollup.rollup();
+    await backendSdk.rollup.rollup();
     expect(changeNote.value).to.eq(0n); // sanity check
     expect(
       await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey),

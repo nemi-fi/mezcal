@@ -1,6 +1,6 @@
-import { lib } from "$lib";
+import { serverLib } from "$lib/server";
 
 export async function POST() {
-  lib.rollup.rollup();
+  serverLib.rollup.rollup();
   return new Response("", { status: 200 });
 }

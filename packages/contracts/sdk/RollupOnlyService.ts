@@ -18,9 +18,9 @@ export class RollupService {
   constructor(
     private contract: PoolERC20,
     private trees: TreesService,
-    private circuits: AsyncOrSync<{
-      rollup: NoirAndBackend;
-    }>,
+    private circuits: {
+      rollup: AsyncOrSync<NoirAndBackend>;
+    },
   ) {}
 
   async rollup() {
@@ -83,7 +83,7 @@ export class RollupService {
       expected_new_nullifier_tree: nullifierTreeInput.newTreeSnapshot,
     };
     // console.log("rollup input\n", JSON.stringify(input));
-    const rollupCircuit = (await this.circuits).rollup;
+    const rollupCircuit = await this.circuits.rollup;
     console.time("rollup generateProof");
     const { witness } = await rollupCircuit.noir.execute(input);
     const { proof } = await rollupCircuit.backend.generateProof(witness);
