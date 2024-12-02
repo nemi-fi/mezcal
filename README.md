@@ -16,6 +16,8 @@
 - [x] PublicInputsBuilder
 - [ ] deploy as proxy
 - [ ] test contracts with larger token amounts
+- [ ] Rename ValueNote to Erc20Note and namespace all erc20 circuit names
+- [ ] Make PoolGeneric permissionless and make PoolERC20.execute permissionless (if possible)
 
 ### Backend
 
