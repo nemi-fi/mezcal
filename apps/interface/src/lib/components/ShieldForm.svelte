@@ -24,12 +24,12 @@
     const tokenContract = IERC20__factory.connect(token.address, account);
     await (
       await tokenContract.approve(
-        lib.rollup.contract,
+        lib.poolErc20.contract,
         amount.quotient.toString(),
       )
     ).wait();
     console.log("approved");
-    await lib.rollup.shield({
+    await lib.poolErc20.shield({
       account,
       token: token.address,
       amount: BigInt(amount.quotient.toString()),

@@ -1,10 +1,11 @@
 <script lang="ts">
   import { lib } from "$lib";
   import { Ui } from "@repo/ui";
+  import type { HTMLSelectAttributes } from "svelte/elements";
 
   let tokens = $derived(lib.tokens);
 
-  let { value = $bindable(), ...props } = $props();
+  let { value = $bindable(), ...props }: HTMLSelectAttributes = $props();
 </script>
 
 <select

@@ -1,7 +1,7 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers, noir, typedDeployments } from "hardhat";
-import type { sdk } from "../sdk";
+import { sdk as interfaceSdk } from "../sdk";
 import { parseUnits, snapshottedBeforeEach } from "../shared/utils";
 import {
   IERC20__factory,
@@ -26,8 +26,7 @@ describe("PoolERC20", () => {
   let pool: PoolERC20;
   let usdc: MockERC20;
   let btc: MockERC20;
-  let service: sdk.RollupService;
-  let encryption: sdk.EncryptionService;
+  let sdk: ReturnType<typeof interfaceSdk.createInterfaceSdk>;
   let CompleteWaAddress: typeof import("../sdk").sdk.CompleteWaAddress;
   snapshottedBeforeEach(async () => {
     [alice, bob, charlie] = await ethers.getSigners();
@@ -48,12 +47,12 @@ describe("PoolERC20", () => {
   });
 
   before(async () => {
-    const { sdk } = (await tsImport(
+    const { sdk: interfaceSdk } = (await tsImport(
       "../sdk",
       __filename,
     )) as typeof import("../sdk");
 
-    const interfaceSdk = sdk.createInterfaceSdk(pool, {
+    sdk = interfaceSdk.createInterfaceSdk(pool, {
       shield: noir.getCircuitJson("shield"),
       unshield: noir.getCircuitJson("unshield"),
       join: noir.getCircuitJson("join"),
@@ -61,69 +60,74 @@ describe("PoolERC20", () => {
       execute: noir.getCircuitJson("execute"),
       rollup: noir.getCircuitJson("rollup"),
     });
-    encryption = interfaceSdk.encryption;
-    service = interfaceSdk.rollup;
 
-    console.log("roots", await interfaceSdk.trees.getTreeRoots());
+    console.log("roots", await sdk.trees.getTreeRoots());
   });
 
   it("shields", async () => {
     const amount = 100n;
-    const { note } = await service.shield({
+    const { note } = await sdk.poolErc20.shield({
       account: alice,
       token: usdc,
       amount,
       secretKey: aliceSecretKey,
     });
 
-    await service.rollup();
-    expect(await service.getBalanceNotesOf(usdc, aliceSecretKey)).to.deep.equal(
-      [note],
+    await sdk.rollup.rollup();
+    expect(
+      await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey),
+    ).to.deep.equal([note]);
+    expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(
+      amount,
     );
-    expect(await service.balanceOf(usdc, aliceSecretKey)).to.equal(amount);
     expect(await usdc.balanceOf(pool)).to.equal(amount);
   });
 
   it("shields many", async () => {
-    await service.shield({
+    await sdk.poolErc20.shield({
       account: alice,
       token: usdc,
       amount: 100n,
       secretKey: aliceSecretKey,
     });
-    await service.shield({
+    await sdk.poolErc20.shield({
       account: alice,
       token: usdc,
       amount: 200n,
       secretKey: aliceSecretKey,
     });
-    await service.rollup();
-    expect(await service.balanceOf(usdc, aliceSecretKey)).to.equal(300n);
+    await sdk.rollup.rollup();
+    expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(300n);
 
-    await service.shield({
+    await sdk.poolErc20.shield({
       account: alice,
       token: usdc,
       amount: 300n,
       secretKey: aliceSecretKey,
     });
-    await service.rollup();
-    expect(await service.balanceOf(usdc, aliceSecretKey)).to.equal(600n);
+    await sdk.rollup.rollup();
+    expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(600n);
   });
 
   it("unshield", async () => {
     const amount = 100n;
     const unshieldAmount = 40n;
-    await service.shield({
+    await sdk.poolErc20.shield({
       account: alice,
       token: usdc,
       amount,
       secretKey: aliceSecretKey,
     });
-    await service.rollup();
-    expect(await service.balanceOf(usdc, aliceSecretKey)).to.equal(amount);
+    await sdk.rollup.rollup();
+    expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(
+      amount,
+    );
 
-    const [fromNote] = await service.getBalanceNotesOf(usdc, aliceSecretKey);
-    await service.unshield({
+    const [fromNote] = await sdk.poolErc20.getBalanceNotesOf(
+      usdc,
+      aliceSecretKey,
+    );
+    await sdk.poolErc20.unshield({
       secretKey: aliceSecretKey,
       fromNote,
       token: await usdc.getAddress(),
@@ -134,9 +138,9 @@ describe("PoolERC20", () => {
     expect(await usdc.balanceOf(bob)).to.eq(unshieldAmount);
     expect(await usdc.balanceOf(pool)).to.equal(amount - unshieldAmount);
 
-    await service.rollup();
+    await sdk.rollup.rollup();
 
-    expect(await service.balanceOf(usdc, aliceSecretKey)).to.equal(
+    expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(
       amount - unshieldAmount,
     );
   });
@@ -144,54 +148,54 @@ describe("PoolERC20", () => {
   it("joins", async () => {
     const amount0 = 100n;
     const amount1 = 200n;
-    await service.shield({
+    await sdk.poolErc20.shield({
       account: alice,
       token: usdc,
       amount: amount0,
       secretKey: aliceSecretKey,
     });
-    await service.shield({
+    await sdk.poolErc20.shield({
       account: alice,
       token: usdc,
       amount: amount1,
       secretKey: aliceSecretKey,
     });
-    await service.rollup();
-    expect(await service.balanceOf(usdc, aliceSecretKey)).to.equal(
+    await sdk.rollup.rollup();
+    expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(
       amount0 + amount1,
     ); // sanity check
 
-    const notes = await service.getBalanceNotesOf(usdc, aliceSecretKey);
+    const notes = await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey);
     expect(notes.length).to.equal(2); // sanity check
-    await service.join({
+    await sdk.poolErc20.join({
       secretKey: aliceSecretKey,
       notes,
     });
-    await service.rollup();
+    await sdk.rollup.rollup();
 
-    expect(await service.balanceOf(usdc, aliceSecretKey)).to.equal(
+    expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(
       amount0 + amount1,
     );
     expect(
-      (await service.getBalanceNotesOf(usdc, aliceSecretKey)).length,
+      (await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey)).length,
     ).to.equal(1);
   });
 
   it("transfers", async () => {
     // prepare
     const amount = 500n;
-    await service.shield({
+    await sdk.poolErc20.shield({
       account: alice,
       token: usdc,
       amount,
       secretKey: aliceSecretKey,
     });
-    await service.rollup();
+    await sdk.rollup.rollup();
 
     // interact
-    const [note] = await service.getBalanceNotesOf(usdc, aliceSecretKey);
+    const [note] = await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey);
     const transferAmount = 123n;
-    const { nullifier, changeNote, toNote } = await service.transfer({
+    const { nullifier, changeNote, toNote } = await sdk.poolErc20.transfer({
       secretKey: aliceSecretKey,
       fromNote: note,
       to: await CompleteWaAddress.fromSecretKey(bobSecretKey),
@@ -214,56 +218,60 @@ describe("PoolERC20", () => {
       ],
     ]);
 
-    await service.rollup();
+    await sdk.rollup.rollup();
 
-    expect(await service.balanceOf(usdc, aliceSecretKey)).to.equal(
+    expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(
       amount - transferAmount,
     );
-    expect(await service.balanceOf(usdc, bobSecretKey)).to.equal(
+    expect(await sdk.poolErc20.balanceOf(usdc, bobSecretKey)).to.equal(
       transferAmount,
     );
   });
 
   it("transfers many", async () => {
-    await service.shield({
+    await sdk.poolErc20.shield({
       account: alice,
       token: usdc,
       amount: 100n,
       secretKey: aliceSecretKey,
     });
-    await service.rollup();
-    const [shieldedNote] = await service.getBalanceNotesOf(
+    await sdk.rollup.rollup();
+    const [shieldedNote] = await sdk.poolErc20.getBalanceNotesOf(
       usdc,
       aliceSecretKey,
     );
 
-    await service.transfer({
+    await sdk.poolErc20.transfer({
       secretKey: aliceSecretKey,
       fromNote: shieldedNote,
       to: await CompleteWaAddress.fromSecretKey(bobSecretKey),
       amount: 30n,
     });
     // TODO: split notes even if they are not rolled up
-    // const {  } = await service.transfer({
+    // const {  } = await sdk.poolErc20.transfer({
     //   secretKey: aliceSecretKey,
     //   fromNote: shieldedNote,
-    //   to: await service.computeWaAddress(charlieSecretKey),
+    //   to: await sdk.poolErc20.computeWaAddress(charlieSecretKey),
     //   amount: 10n,
     // });
-    await service.rollup();
-    const [bobNote] = await service.getBalanceNotesOf(usdc, bobSecretKey);
+    await sdk.rollup.rollup();
+    const [bobNote] = await sdk.poolErc20.getBalanceNotesOf(usdc, bobSecretKey);
 
-    await service.transfer({
+    await sdk.poolErc20.transfer({
       secretKey: bobSecretKey,
       fromNote: bobNote,
       to: await CompleteWaAddress.fromSecretKey(charlieSecretKey),
       amount: 10n,
     });
-    await service.rollup();
+    await sdk.rollup.rollup();
 
-    expect(await service.balanceOf(usdc, aliceSecretKey)).to.equal(100n - 30n);
-    expect(await service.balanceOf(usdc, bobSecretKey)).to.equal(30n - 10n);
-    expect(await service.balanceOf(usdc, charlieSecretKey)).to.equal(10n);
+    expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(
+      100n - 30n,
+    );
+    expect(await sdk.poolErc20.balanceOf(usdc, bobSecretKey)).to.equal(
+      30n - 10n,
+    );
+    expect(await sdk.poolErc20.balanceOf(usdc, charlieSecretKey)).to.equal(10n);
   });
 
   it("executes", async () => {
@@ -275,14 +283,14 @@ describe("PoolERC20", () => {
     const amountIn = 50n;
     const amountOut = 100n;
 
-    await service.shield({
+    await sdk.poolErc20.shield({
       account: alice,
       token: usdc,
       amount: initialBalance,
       secretKey: aliceSecretKey,
     });
-    await service.rollup();
-    const [shieldedNote] = await service.getBalanceNotesOf(
+    await sdk.rollup.rollup();
+    const [shieldedNote] = await sdk.poolErc20.getBalanceNotesOf(
       usdc,
       aliceSecretKey,
     );
@@ -310,7 +318,7 @@ describe("PoolERC20", () => {
     ];
 
     const to = await CompleteWaAddress.fromSecretKey(bobSecretKey);
-    await service.execute({
+    await sdk.poolErc20.execute({
       fromSecretKey: aliceSecretKey,
       fromNotes: [shieldedNote],
       to,
@@ -328,28 +336,28 @@ describe("PoolERC20", () => {
       ],
       calls,
     });
-    await service.rollup();
+    await sdk.rollup.rollup();
 
-    expect(await service.balanceOf(usdc, aliceSecretKey)).to.eq(
+    expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.eq(
       initialBalance - amountOut,
     );
-    expect(await service.balanceOf(btc, bobSecretKey)).to.eq(amountIn);
+    expect(await sdk.poolErc20.balanceOf(btc, bobSecretKey)).to.eq(amountIn);
     expect(await usdc.balanceOf(pool)).to.eq(initialBalance - amountOut);
     expect(await btc.balanceOf(pool)).to.eq(amountIn);
   });
 
   it("can't double spend a note", async () => {
     const amount = 100n;
-    await service.shield({
+    await sdk.poolErc20.shield({
       account: alice,
       token: usdc,
       amount,
       secretKey: aliceSecretKey,
     });
-    await service.rollup();
+    await sdk.rollup.rollup();
 
-    const [note] = await service.getBalanceNotesOf(usdc, aliceSecretKey);
-    await service.transfer({
+    const [note] = await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey);
+    await sdk.poolErc20.transfer({
       secretKey: aliceSecretKey,
       fromNote: note,
       to: await CompleteWaAddress.fromSecretKey(bobSecretKey),
@@ -357,7 +365,7 @@ describe("PoolERC20", () => {
     });
 
     await expect(
-      service.transfer({
+      sdk.poolErc20.transfer({
         secretKey: aliceSecretKey,
         fromNote: note,
         to: await CompleteWaAddress.fromSecretKey(charlieSecretKey),
@@ -375,33 +383,33 @@ describe("PoolERC20", () => {
   it.skip("fails to unshield too much", async () => {});
 
   it("does not have notes until it's rolled up", async () => {
-    const { note } = await service.shield({
+    const { note } = await sdk.poolErc20.shield({
       account: alice,
       token: usdc,
       amount: 100n,
       secretKey: aliceSecretKey,
     });
-    expect(await service.getBalanceNotesOf(usdc, aliceSecretKey)).to.deep.equal(
-      [],
-    );
-    await service.rollup();
-    expect(await service.getBalanceNotesOf(usdc, aliceSecretKey)).to.deep.equal(
-      [note],
-    );
+    expect(
+      await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey),
+    ).to.deep.equal([]);
+    await sdk.rollup.rollup();
+    expect(
+      await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey),
+    ).to.deep.equal([note]);
 
-    const { changeNote } = await service.transfer({
+    const { changeNote } = await sdk.poolErc20.transfer({
       secretKey: aliceSecretKey,
       fromNote: note,
       to: await CompleteWaAddress.fromSecretKey(bobSecretKey),
       amount: 100n,
     });
-    expect(await service.getBalanceNotesOf(usdc, aliceSecretKey)).to.deep.equal(
-      [note],
-    ); // still exists
-    await service.rollup();
+    expect(
+      await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey),
+    ).to.deep.equal([note]); // still exists
+    await sdk.rollup.rollup();
     expect(changeNote.value).to.eq(0n); // sanity check
-    expect(await service.getBalanceNotesOf(usdc, aliceSecretKey)).to.deep.equal(
-      [changeNote],
-    );
+    expect(
+      await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey),
+    ).to.deep.equal([changeNote]);
   });
 });

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { lib } from "$lib";
   import ShieldForm from "$lib/components/ShieldForm.svelte";
+  import { sdk } from "@repo/contracts/sdk";
   import {
     IERC20__factory,
     MockERC20__factory,
@@ -48,7 +49,7 @@
           const secretKey = await lib.evm.getSecretKey(signer);
           const balances = await Promise.all(
             lib.tokens.map(async (token) => {
-              const balance = await lib.rollup.balanceOf(
+              const balance = await lib.poolErc20.balanceOf(
                 token.address,
                 secretKey,
               );
@@ -73,7 +74,7 @@
           }
           const secretKey = await lib.evm.getSecretKey(signer);
           return (
-            await lib.rollup.computeCompleteWaAddress(secretKey)
+            await sdk.CompleteWaAddress.fromSecretKey(secretKey)
           ).toString();
         },
       },

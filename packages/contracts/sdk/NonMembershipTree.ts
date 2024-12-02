@@ -14,7 +14,7 @@ export class NonMembershipTree {
     const { NullifierLeaf, NullifierLeafPreimage } = await import(
       "@aztec/circuits.js"
     );
-    // @ts-expect-error hardhat does not support ESM
+    // @ts-ignore hardhat does not support ESM
     const { AztecLmdbStore } = await import("@aztec/kv-store/lmdb");
     const db = AztecLmdbStore.open();
     class NullifierTree extends StandardIndexedTreeWithAppend {

@@ -12,7 +12,7 @@ export function printPublicInputs(publicInputs: string[]) {
 
 export async function keccak256ToFr(value: string): Promise<Fr> {
   const { Fr } = await import("@aztec/aztec.js");
-  // @ts-expect-error
+  // @ts-ignore
   const { truncateAndPad } = await import("@aztec/foundation/serialize");
   const hash = ethers.keccak256(value);
   return Fr.fromBuffer(truncateAndPad(Buffer.from(ethers.getBytes(hash))));

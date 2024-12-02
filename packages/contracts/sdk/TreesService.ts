@@ -1,9 +1,9 @@
 import type { Fr } from "@aztec/aztec.js";
 import type { StandardTree } from "@aztec/merkle-tree";
-import type { PoolERC20 } from "@repo/contracts/typechain-types";
 import { ethers } from "ethers";
 import { isEqual, orderBy, range, times } from "lodash-es";
 import { assert } from "ts-essentials";
+import type { PoolERC20 } from "../typechain-types";
 import { NonMembershipTree } from "./NonMembershipTree";
 import {
   INCLUDE_UNCOMMITTED,
@@ -89,6 +89,7 @@ async function createMerkleTree(height: number) {
   );
 
   const { Fr } = await import("@aztec/aztec.js");
+  // @ts-ignore hardhat does not support ESM
   const { AztecLmdbStore } = await import("@aztec/kv-store/lmdb");
   const store = AztecLmdbStore.open();
   const tree: StandardTree<Fr> = await newTree(
