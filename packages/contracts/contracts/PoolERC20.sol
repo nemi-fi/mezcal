@@ -196,7 +196,7 @@ contract PoolERC20 is PoolGeneric {
         pi.push(getNoteHashTree().root);
         pi.push(getNullifierTree().root);
         // execution
-        pi.push(executionHash.toBytes32());
+        pi.push(executionHash);
         pi.push(wrappedExecutionHash);
         // amounts in
         for (uint256 i = 0; i < execution.amountsIn.length; i++) {

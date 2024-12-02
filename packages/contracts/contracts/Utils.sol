@@ -2,7 +2,10 @@
 pragma solidity ^0.8.23;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Fr, FrLib} from "./Fr.sol";
 import {console} from "hardhat/console.sol";
+
+using FrLib for Fr;
 
 // Note: keep in sync with other languages
 uint32 constant MAX_TOKENS_IN_PER_EXECUTION = 4;
@@ -73,6 +76,10 @@ library PublicInputs {
 
     function push(Type memory publicInputs, address value) internal pure {
         push(publicInputs, castAddressToBytes32(value));
+    }
+
+    function push(Type memory publicInputs, Fr value) internal pure {
+        push(publicInputs, value.toBytes32());
     }
 
     function pushUint256Limbs(
