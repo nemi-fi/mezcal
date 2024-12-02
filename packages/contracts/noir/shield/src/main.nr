@@ -1,12 +1,11 @@
-use common::{EthAddress, WaAddress};
+use common::WaAddress;
 
 fn main(
     owner: WaAddress,
-    token: pub EthAddress,
-    value: pub common::U256,
+    amount: pub common::TokenAmount,
     randomness: Field,
     note_hash: pub Field,
 ) {
-    let note = common::Erc20Note { owner, token, value, randomness };
+    let note = common::Erc20Note { owner, amount, randomness };
     assert(note.hash() == note_hash, "invalid note hash");
 }

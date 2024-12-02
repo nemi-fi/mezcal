@@ -9,13 +9,12 @@ fn main(
     from_secret_key: Field,
     from_note_inputs: common::NoteConsumptionInputs,
     // to params
+    // TODO(security): check if specifying a different to in the EVM contract will bypass the proof
     to: pub common::EthAddress,
     amount: pub common::TokenAmount,
     // change
     change_randomness: Field,
 ) -> pub Result {
-    assert_eq(amount.token, from_note_inputs.note.token, "invalid token");
-
     let (nullifier, change_note) = common::Erc20Note::consume_and_sub(
         from_note_inputs,
         amount,

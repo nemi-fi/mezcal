@@ -1,5 +1,3 @@
-use common::Erc20Note;
-
 struct Result {
     nullifier: Field,
     change_note_hash: Field,
@@ -20,15 +18,14 @@ fn main(
 ) -> pub Result {
     let (nullifier, change_note) = common::Erc20Note::consume_and_sub(
         from_note_inputs,
-        common::TokenAmount { token: from_note_inputs.note.token, amount: amount },
+        common::TokenAmount { token: from_note_inputs.note.amount.token, amount },
         change_randomness,
         tree_roots,
         from_secret_key,
     );
-    let to_note = Erc20Note {
+    let to_note = common::Erc20Note {
         owner: to,
-        token: from_note_inputs.note.token,
-        value: amount,
+        amount: common::TokenAmount { token: from_note_inputs.note.amount.token, amount },
         randomness: to_randomness,
     };
 

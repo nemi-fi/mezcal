@@ -57,13 +57,7 @@ fn main(
     // emit new note hashes
     let note_hashes_in = amounts_in.enumerate().map(|(i, amount): (u32, common::TokenAmount)| {
         if (amount.amount != common::U256::new()) {
-            common::Erc20Note {
-                owner: to_address,
-                token: amount.token,
-                value: amount.amount,
-                randomness: to_randomness[i],
-            }
-                .hash()
+            common::Erc20Note { owner: to_address, amount, randomness: to_randomness[i] }.hash()
         } else {
             0
         }

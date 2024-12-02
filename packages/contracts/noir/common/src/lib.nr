@@ -59,6 +59,26 @@ pub struct TokenAmount {
     pub amount: crate::U256,
 }
 
+impl TokenAmount {
+    fn _check(self, other: Self) {
+        assert_eq(self.token, other.token, "invalid token");
+    }
+}
+
+impl std::ops::Add for TokenAmount {
+    fn add(self, other: Self) -> Self {
+        self._check(other);
+        Self { token: self.token, amount: self.amount + other.amount }
+    }
+}
+
+impl std::ops::Sub for TokenAmount {
+    fn sub(self, other: Self) -> Self {
+        self._check(other);
+        Self { token: self.token, amount: self.amount - other.amount }
+    }
+}
+
 pub struct TreeRoots {
     pub note_hash_root: Field,
     pub nullifier_root: Field,

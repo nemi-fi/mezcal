@@ -419,7 +419,7 @@ describe("PoolERC20", () => {
       await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey),
     ).to.deep.equal([note]); // still exists
     await backendSdk.rollup.rollup();
-    expect(changeNote.value).to.eq(0n); // sanity check
+    expect(changeNote.amount).to.eq(0n); // sanity check
     expect(
       await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey),
     ).to.deep.equal([changeNote]);
