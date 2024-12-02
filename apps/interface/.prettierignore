@@ -6,3 +6,5 @@ yarn.lock
 .svelte-kit
 .vercel
 ROUTES.ts
+
+target
