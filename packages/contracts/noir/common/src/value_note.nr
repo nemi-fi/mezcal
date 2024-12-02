@@ -2,6 +2,7 @@ use crate::{EthAddress, WaAddress};
 
 pub struct ValueNote {
     pub owner: WaAddress,
+    // TODO: refactor to use TokenAmount
     pub token: EthAddress,
     pub value: crate::U256,
     pub randomness: Field,
