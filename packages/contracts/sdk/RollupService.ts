@@ -2,18 +2,15 @@ import type { Fr } from "@aztec/aztec.js";
 import type { UltraPlonkBackend } from "@aztec/bb.js";
 import type { AppendOnlyTree, StandardIndexedTree } from "@aztec/merkle-tree";
 import type { Noir } from "@noir-lang/noir_js";
-import {
-  PoolERC20__factory,
-  type PoolERC20,
-} from "@repo/contracts/typechain-types";
-import type { ExecutionStruct } from "@repo/contracts/typechain-types/contracts/PoolERC20";
 import { utils } from "@repo/utils";
 import { ethers } from "ethers";
 import { compact, isEqual, orderBy, times } from "lodash-es";
 import { assert, type AsyncOrSync } from "ts-essentials";
-import { fromNoirU256, keccak256ToFr, toNoirU256, U256_LIMBS } from "../utils";
+import { PoolERC20__factory, type PoolERC20 } from "../typechain-types";
+import type { ExecutionStruct } from "../typechain-types/contracts/PoolERC20";
 import { EncryptionService } from "./EncryptionService";
 import type { TreesService } from "./TreesService";
+import { fromNoirU256, keccak256ToFr, toNoirU256, U256_LIMBS } from "./utils";
 
 // Note: keep in sync with other languages
 export const NOTE_HASH_TREE_HEIGHT = 40;
@@ -889,7 +886,7 @@ type NoirAndBackend = {
 };
 
 export async function poseidon2Hash(inputs: (bigint | string | number)[]) {
-  // I hate hardhat
+  // @ts-expect-error hardhat does not support ESM
   const { poseidon2Hash } = await import("@aztec/foundation/crypto");
   return poseidon2Hash(inputs.map((x) => BigInt(x)));
 }

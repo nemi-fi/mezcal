@@ -1,8 +1,7 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import type { EncryptionService } from "@repo/interface/src/lib/services/EncryptionService";
-import type { RollupService } from "@repo/interface/src/lib/services/RollupService";
 import { expect } from "chai";
 import { ethers, noir, typedDeployments } from "hardhat";
+import type { sdk } from "../sdk";
 import { parseUnits, snapshottedBeforeEach } from "../shared/utils";
 import {
   IERC20__factory,
@@ -27,9 +26,9 @@ describe("PoolERC20", () => {
   let pool: PoolERC20;
   let usdc: MockERC20;
   let btc: MockERC20;
-  let service: RollupService;
-  let encryption: EncryptionService;
-  let CompleteWaAddress: typeof import("@repo/interface/src/lib/services/RollupService").CompleteWaAddress;
+  let service: sdk.RollupService;
+  let encryption: sdk.EncryptionService;
+  let CompleteWaAddress: typeof import("../sdk").sdk.CompleteWaAddress;
   snapshottedBeforeEach(async () => {
     [alice, bob, charlie] = await ethers.getSigners();
     await typedDeployments.fixture();
@@ -44,43 +43,28 @@ describe("PoolERC20", () => {
     await usdc.mintForTests(alice, await parseUnits(usdc, "1000000"));
     await usdc.connect(alice).approve(pool, ethers.MaxUint256);
 
-    CompleteWaAddress = (
-      await tsImport(
-        "@repo/interface/src/lib/services/RollupService",
-        __filename,
-      )
-    ).CompleteWaAddress;
+    CompleteWaAddress = (await tsImport("../sdk", __filename)).sdk
+      .CompleteWaAddress;
   });
 
   before(async () => {
-    const { RollupService } = (await tsImport(
-      "@repo/interface/src/lib/services/RollupService",
+    const { sdk } = (await tsImport(
+      "../sdk",
       __filename,
-    )) as typeof import("@repo/interface/src/lib/services/RollupService");
-    const { EncryptionService } = (await tsImport(
-      "@repo/interface/src/lib/services/EncryptionService",
-      __filename,
-    )) as typeof import("@repo/interface/src/lib/services/EncryptionService");
-    const { TreesService } = (await tsImport(
-      "@repo/interface/src/lib/services/TreesService",
-      __filename,
-    )) as typeof import("@repo/interface/src/lib/services/TreesService");
-    encryption = EncryptionService.getSingleton();
-    const trees = new TreesService(pool);
-    service = new RollupService(
-      pool,
-      encryption,
-      trees,
-      await ethers.resolveProperties({
-        shield: getCircuit("shield"),
-        unshield: getCircuit("unshield"),
-        join: getCircuit("join"),
-        transfer: getCircuit("transfer"),
-        execute: getCircuit("execute"),
-        rollup: getCircuit("rollup"),
-      }),
-    );
-    console.log("roots", await trees.getTreeRoots());
+    )) as typeof import("../sdk");
+
+    const interfaceSdk = sdk.createInterfaceSdk(pool, {
+      shield: noir.getCircuitJson("shield"),
+      unshield: noir.getCircuitJson("unshield"),
+      join: noir.getCircuitJson("join"),
+      transfer: noir.getCircuitJson("transfer"),
+      execute: noir.getCircuitJson("execute"),
+      rollup: noir.getCircuitJson("rollup"),
+    });
+    encryption = interfaceSdk.encryption;
+    service = interfaceSdk.rollup;
+
+    console.log("roots", await interfaceSdk.trees.getTreeRoots());
   });
 
   it("shields", async () => {
@@ -421,17 +405,3 @@ describe("PoolERC20", () => {
     );
   });
 });
-
-async function getCircuit(name: string) {
-  // TODO: update hardhat-plugin-noir to support 0.39.0 backends
-  const { Noir } = (await eval(
-    `import("@noir-lang/noir_js")`,
-  )) as typeof import("@noir-lang/noir_js");
-  const { UltraPlonkBackend } = (await eval(
-    `import("@aztec/bb.js")`,
-  )) as typeof import("@aztec/bb.js");
-  const circuit = await noir.getCircuitJson(name);
-  const noir_ = new Noir(circuit);
-  const backend = new UltraPlonkBackend(circuit.bytecode);
-  return { noir: noir_, backend: backend };
-}

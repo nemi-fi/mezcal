@@ -8,7 +8,7 @@
   - [x] extract PoolGeneric storage into a struct
 - [x] join ValueNotes
 - [ ] negative tests
-- [ ] use bignumber for amounts
+- [x] use bignumber for amounts
 - [ ] support ETH
 - [ ] fees
 - [ ] get the remained of tokens from router to relayer/treasury
