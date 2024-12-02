@@ -15,10 +15,11 @@
 - [ ] get the remained of tokens from router to relayer/treasury
 - [x] PublicInputsBuilder
 - [ ] deploy as proxy
+- [ ] test contracts with larger token amounts
 
 ### Backend
 
-- [ ] prove using native bb
+- [x] prove using native bb
 - [ ] return pending tree roots
 
 ### UI
