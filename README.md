@@ -22,6 +22,7 @@
 ### Backend
 
 - [x] prove using native bb
+- [ ] persist merkle trees
 - [ ] return pending tree roots
 
 ### UI
