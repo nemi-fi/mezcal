@@ -16,7 +16,7 @@ fn main(
 ) -> pub Result {
     assert_eq(amount.token, from_note_inputs.note.token, "invalid token");
 
-    let (nullifier, change_note) = common::ValueNote::consume_and_sub(
+    let (nullifier, change_note) = common::Erc20Note::consume_and_sub(
         from_note_inputs,
         amount,
         change_randomness,

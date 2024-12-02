@@ -7,6 +7,6 @@ fn main(
     randomness: Field,
     note_hash: pub Field,
 ) {
-    let note = common::ValueNote { owner, token, value, randomness };
+    let note = common::Erc20Note { owner, token, value, randomness };
     assert(note.hash() == note_hash, "invalid note hash");
 }

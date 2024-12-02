@@ -24,7 +24,7 @@ fn main(
         joined_value += notes[i].note.value;
     }
 
-    let join_note_hash = common::ValueNote {
+    let join_note_hash = common::Erc20Note {
         owner: notes[0].note.owner,
         token,
         value: joined_value,

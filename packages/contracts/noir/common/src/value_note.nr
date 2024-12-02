@@ -1,6 +1,6 @@
 use crate::{EthAddress, WaAddress};
 
-pub struct ValueNote {
+pub struct Erc20Note {
     pub owner: WaAddress,
     // TODO: refactor to use TokenAmount
     pub token: EthAddress,
@@ -8,8 +8,8 @@ pub struct ValueNote {
     pub randomness: Field,
 }
 
-impl ValueNote {
-    // TODO: remove this in favour of BoundedVec<ValueNote, MAX_LEN>
+impl Erc20Note {
+    // TODO: remove this in favour of BoundedVec<Erc20Note, MAX_LEN>
     pub fn is_set(self) -> bool {
         (self.owner != 0) & (self.token != 0)
     }
@@ -33,7 +33,7 @@ impl ValueNote {
     }
 }
 
-impl crate::Note<6> for ValueNote {
+impl crate::Note<6> for Erc20Note {
     fn serialize(self) -> [Field; 6] {
         [self.owner, self.token].concat(self.value.limbs).concat([self.randomness])
     }
@@ -44,7 +44,7 @@ impl crate::Note<6> for ValueNote {
     }
 }
 
-impl crate::OwnedNote for ValueNote {
+impl crate::OwnedNote for Erc20Note {
     fn owner(self) -> WaAddress {
         self.owner
     }

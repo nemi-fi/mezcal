@@ -7,7 +7,7 @@ mod value_note;
 
 pub use note::Note;
 pub use owned_note::{consume_owned_note, NoteConsumptionInputs, OwnedNote};
-pub use value_note::ValueNote;
+pub use value_note::Erc20Note;
 
 // Note: keep in sync with other languages
 pub global NOTE_HASH_TREE_HEIGHT: u32 = 40;

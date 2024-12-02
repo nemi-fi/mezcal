@@ -33,7 +33,7 @@ fn main(
             |(i, note_input): (u32, common::NoteConsumptionInputs)| {
                 let amount_out = amounts_out[i];
                 if (note_input.note.is_set()) {
-                    let (nullifier, change_note) = common::ValueNote::consume_and_sub(
+                    let (nullifier, change_note) = common::Erc20Note::consume_and_sub(
                         note_input,
                         amount_out,
                         change_randomness[i],
@@ -57,7 +57,7 @@ fn main(
     // emit new note hashes
     let note_hashes_in = amounts_in.enumerate().map(|(i, amount): (u32, common::TokenAmount)| {
         if (amount.amount != common::U256::new()) {
-            common::ValueNote {
+            common::Erc20Note {
                 owner: to_address,
                 token: amount.token,
                 value: amount.amount,

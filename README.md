@@ -6,8 +6,8 @@
 
 - [x] split contract into a generic rollup and ERC20 specific
   - [x] extract PoolGeneric storage into a struct
-- [x] join ValueNote
-- [ ] split ValueNote
+- [x] join Erc20Note
+- [ ] split Erc20Note
 - [ ] negative tests
 - [x] use bignumber for amounts
 - [ ] support ETH
