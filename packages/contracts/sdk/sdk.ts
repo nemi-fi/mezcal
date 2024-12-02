@@ -5,7 +5,6 @@ import { mapValues } from "lodash-es";
 import type { AsyncOrSync } from "ts-essentials";
 import type { PoolERC20 } from "../typechain-types/index.js";
 import { EncryptionService } from "./EncryptionService.js";
-import { NativeUltraPlonkBackend } from "./NativeUltraPlonkBackend.js";
 import { type ITreesService } from "./RemoteTreesService.js";
 import { RollupService } from "./RollupOnlyService.js";
 import { PoolErc20Service } from "./RollupService.js";
@@ -56,6 +55,9 @@ export function createBackendSdk(
   const rollup = new RollupService(coreSdk.contract, trees, {
     rollup: utils.iife(async () => {
       const { Noir } = await import("@noir-lang/noir_js");
+      const { NativeUltraPlonkBackend } = await import(
+        "./NativeUltraPlonkBackend.js"
+      );
       const noir = new Noir(await compiledCircuits.rollup);
       const backend = new NativeUltraPlonkBackend(
         `${process.env.HOME}/.bb/bb`,
