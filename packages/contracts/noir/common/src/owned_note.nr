@@ -20,7 +20,7 @@ where
 }
 
 pub struct NoteConsumptionInputs {
-    pub note: crate::ValueNote,
+    pub note: crate::Erc20Note,
     pub note_index: Field,
     pub note_sibling_path: [Field; crate::NOTE_HASH_TREE_HEIGHT],
     pub nullifier_low_leaf_preimage: NullifierLeafPreimage,

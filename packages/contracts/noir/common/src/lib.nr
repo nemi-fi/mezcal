@@ -7,7 +7,7 @@ mod value_note;
 
 pub use note::Note;
 pub use owned_note::{consume_owned_note, NoteConsumptionInputs, OwnedNote};
-pub use value_note::ValueNote;
+pub use value_note::Erc20Note;
 
 // Note: keep in sync with other languages
 pub global NOTE_HASH_TREE_HEIGHT: u32 = 40;
@@ -57,6 +57,26 @@ pub fn compute_wa_address(secret_key: Field) -> WaAddress {
 pub struct TokenAmount {
     pub token: crate::EthAddress,
     pub amount: crate::U256,
+}
+
+impl TokenAmount {
+    fn _check(self, other: Self) {
+        assert_eq(self.token, other.token, "invalid token");
+    }
+}
+
+impl std::ops::Add for TokenAmount {
+    fn add(self, other: Self) -> Self {
+        self._check(other);
+        Self { token: self.token, amount: self.amount + other.amount }
+    }
+}
+
+impl std::ops::Sub for TokenAmount {
+    fn sub(self, other: Self) -> Self {
+        self._check(other);
+        Self { token: self.token, amount: self.amount - other.amount }
+    }
 }
 
 pub struct TreeRoots {

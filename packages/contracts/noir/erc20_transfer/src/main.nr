@@ -1,5 +1,3 @@
-use common::ValueNote;
-
 struct Result {
     nullifier: Field,
     change_note_hash: Field,
@@ -18,17 +16,16 @@ fn main(
     // change
     change_randomness: Field,
 ) -> pub Result {
-    let (nullifier, change_note) = common::ValueNote::consume_and_sub(
+    let (nullifier, change_note) = common::Erc20Note::consume_and_sub(
         from_note_inputs,
-        common::TokenAmount { token: from_note_inputs.note.token, amount: amount },
+        common::TokenAmount { token: from_note_inputs.note.amount.token, amount },
         change_randomness,
         tree_roots,
         from_secret_key,
     );
-    let to_note = ValueNote {
+    let to_note = common::Erc20Note {
         owner: to,
-        token: from_note_inputs.note.token,
-        value: amount,
+        amount: common::TokenAmount { token: from_note_inputs.note.amount.token, amount },
         randomness: to_randomness,
     };
 

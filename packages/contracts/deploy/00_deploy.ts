@@ -22,11 +22,23 @@ const deploy: DeployFunction = async ({
       contract: `noir/target/${circuitName}.sol:UltraVerifier`,
     });
   }
-  const shieldVerifier = await deployVerifier("ShieldVerifier", "shield");
-  const unshieldVerifier = await deployVerifier("UnshieldVerifier", "unshield");
-  const joinVerifier = await deployVerifier("JoinVerifier", "join");
-  const transferVerifier = await deployVerifier("TransferVerifier", "transfer");
-  const executeVerifier = await deployVerifier("ExecuteVerifier", "execute");
+  const shieldVerifier = await deployVerifier(
+    "Erc20ShieldVerifier",
+    "erc20_shield",
+  );
+  const unshieldVerifier = await deployVerifier(
+    "Erc20UnshieldVerifier",
+    "erc20_unshield",
+  );
+  const joinVerifier = await deployVerifier("Erc20JoinVerifier", "erc20_join");
+  const transferVerifier = await deployVerifier(
+    "Erc20TransferVerifier",
+    "erc20_transfer",
+  );
+  const executeVerifier = await deployVerifier(
+    "Erc20ExecuteVerifier",
+    "erc20_execute",
+  );
   const rollupVerifier = await deployVerifier("RollupVerifier", "rollup");
 
   const router = await typedDeployments.deploy("RouterERC20", {

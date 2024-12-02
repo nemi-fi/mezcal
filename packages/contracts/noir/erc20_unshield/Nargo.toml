@@ -1,5 +1,5 @@
 [package]
-name = "shield"
+name = "erc20_unshield"
 type = "bin"
 authors = ["Oleh Misarosh <olehmisar@gmail.com"]
 compiler_version = ">=0.39.0"

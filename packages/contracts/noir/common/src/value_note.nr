@@ -1,17 +1,13 @@
-use crate::{EthAddress, WaAddress};
-
-pub struct ValueNote {
-    pub owner: WaAddress,
-    // TODO: refactor to use TokenAmount
-    pub token: EthAddress,
-    pub value: crate::U256,
+pub struct Erc20Note {
+    pub owner: crate::WaAddress,
+    pub amount: crate::TokenAmount,
     pub randomness: Field,
 }
 
-impl ValueNote {
-    // TODO: remove this in favour of BoundedVec<ValueNote, MAX_LEN>
+impl Erc20Note {
+    // TODO: remove this in favour of BoundedVec<Erc20Note, MAX_LEN>
     pub fn is_set(self) -> bool {
-        (self.owner != 0) & (self.token != 0)
+        (self.owner != 0) & (self.amount.amount != crate::U256::new())
     }
 
     pub fn consume_and_sub(
@@ -21,21 +17,19 @@ impl ValueNote {
         tree_roots: crate::TreeRoots,
         secret_key: Field,
     ) -> (Field, Self) {
-        assert_eq(note_consumption.note.token, amount.token, "invalid token");
         let nullifier = crate::consume_owned_note(tree_roots, secret_key, note_consumption);
         let change_note = Self {
             owner: note_consumption.note.owner,
-            token: note_consumption.note.token,
-            value: note_consumption.note.value - amount.amount,
+            amount: note_consumption.note.amount - amount,
             randomness,
         };
         (nullifier, change_note)
     }
 }
 
-impl crate::Note<6> for ValueNote {
+impl crate::Note<6> for Erc20Note {
     fn serialize(self) -> [Field; 6] {
-        [self.owner, self.token].concat(self.value.limbs).concat([self.randomness])
+        [self.owner, self.amount.token].concat(self.amount.amount.limbs).concat([self.randomness])
     }
 
     fn hash(self) -> Field {
@@ -44,8 +38,8 @@ impl crate::Note<6> for ValueNote {
     }
 }
 
-impl crate::OwnedNote for ValueNote {
-    fn owner(self) -> WaAddress {
+impl crate::OwnedNote for Erc20Note {
+    fn owner(self) -> crate::WaAddress {
         self.owner
     }
 }
