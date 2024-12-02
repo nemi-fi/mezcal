@@ -83,7 +83,8 @@ export class NativeUltraPlonkBackend {
   }
 
   async #makeTargetDir() {
-    const targetDir = path.normalize(path.join(__dirname, "target"));
+    const dirname = typeof __dirname === "string" ? __dirname : "";
+    const targetDir = path.normalize(path.join(dirname, "target"));
     fs.mkdirSync(targetDir, { recursive: true });
     return targetDir;
   }
