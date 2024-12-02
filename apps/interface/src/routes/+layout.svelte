@@ -3,7 +3,7 @@
 
   import "./polyfills";
 
-  import { dev } from "$app/environment";
+  import { browser, dev } from "$app/environment";
   import { lib } from "$lib";
   import { Ui } from "@repo/ui";
   import { QueryClientProvider } from "@tanstack/svelte-query";
@@ -13,6 +13,12 @@
   let { children } = $props();
 
   inject({ mode: dev ? "development" : "production" });
+
+  if (browser) {
+    setTimeout(() => {
+      lib.currencyList.load();
+    });
+  }
 </script>
 
 <QueryClientProvider client={lib.queries.queryClient}>

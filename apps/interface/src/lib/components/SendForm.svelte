@@ -19,9 +19,7 @@
     utils.assertConnected(account);
     const secretKey = await lib.evm.getSecretKey(account);
 
-    const token = lib.tokens.find((t) =>
-      utils.isAddressEqual(t.address, formData.token),
-    );
+    const token = lib.currencyList.getByAddress(formData.token);
     utils.assert(token, `token not found: ${formData.token}`);
     const amount = utils.parseCurrencyAmount(token, formData.amount);
     const [note] = await lib.poolErc20.getBalanceNotesOf(

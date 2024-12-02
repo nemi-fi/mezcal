@@ -15,14 +15,14 @@
   const balances = $derived(
     createQuery(
       {
-        queryKey: ["balances", lib.tokens, lib.evm.address],
+        queryKey: ["balances", lib.currencyList.currencies, lib.evm.address],
         queryFn: async () => {
           const address = lib.evm.address;
           if (!address) {
             return [];
           }
           const balances = await Promise.all(
-            lib.tokens.map(async (token) => {
+            lib.currencyList.currencies.map(async (token) => {
               const tokenContract = IERC20__factory.connect(
                 token.address,
                 lib.evm.provider,
@@ -41,7 +41,11 @@
   const shieldedBalances = $derived(
     createQuery(
       {
-        queryKey: ["shieldedBalances", lib.tokens, lib.evm.address],
+        queryKey: [
+          "shieldedBalances",
+          lib.currencyList.currencies,
+          lib.evm.address,
+        ],
         queryFn: async () => {
           const signer = await lib.evm.getSigner();
           if (!signer) {
@@ -49,7 +53,7 @@
           }
           const secretKey = await lib.evm.getSecretKey(signer);
           const balances = await Promise.all(
-            lib.tokens.map(async (token) => {
+            lib.currencyList.currencies.map(async (token) => {
               const balance = await lib.poolErc20.balanceOf(
                 token.address,
                 secretKey,
@@ -114,7 +118,7 @@
       <Ui.LoadingButton
         onclick={async () => {
           utils.assertConnected(lib.evm.address);
-          for (const token of lib.tokens) {
+          for (const token of lib.currencyList.currencies) {
             const contract = MockERC20__factory.connect(
               token.address,
               lib.relayer,
@@ -124,10 +128,10 @@
               tx = await contract.mintForTests(lib.evm.address, 10000000n);
             } else {
               const whaleAddress = "0x40ebc1ac8d4fedd2e144b75fe9c0420be82750c6";
-              await lib.evm.provider.send("anvil_impersonateAccount", [
+              await lib.provider.send("anvil_impersonateAccount", [
                 whaleAddress,
               ]);
-              const whale = await lib.evm.provider.getSigner(whaleAddress);
+              const whale = await lib.provider.getSigner(whaleAddress);
               tx = await contract
                 .connect(whale)
                 .transfer(

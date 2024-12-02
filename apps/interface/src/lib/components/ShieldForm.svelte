@@ -15,9 +15,7 @@
   async function onsubmit(formData: z.infer<typeof schema>) {
     const account = await lib.evm.getSigner();
     utils.assertConnected(account);
-    const token = lib.tokens.find((t) =>
-      utils.isAddressEqual(t.address, formData.token),
-    );
+    const token = lib.currencyList.getByAddress(formData.token);
     utils.assert(token, `token not found: ${formData.token}`);
     const amount = utils.parseCurrencyAmount(token, formData.amount);
     console.log("acc", await account.getAddress());

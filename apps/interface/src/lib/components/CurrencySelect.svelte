@@ -3,7 +3,7 @@
   import { Ui } from "@repo/ui";
   import type { HTMLSelectAttributes } from "svelte/elements";
 
-  let tokens = $derived(lib.tokens);
+  let tokens = $derived(lib.currencyList.currencies);
 
   let { value = $bindable(), ...props }: HTMLSelectAttributes = $props();
 </script>
