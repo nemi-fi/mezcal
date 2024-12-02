@@ -76,18 +76,17 @@ export class PoolErc20Service {
     console.time("shield generateProof");
     const note = await Erc20Note.from({
       owner: await CompleteWaAddress.fromSecretKey(secretKey),
-      token: await ethers.resolveAddress(token),
-      amount,
+      amount: await TokenAmount.from({
+        token: await ethers.resolveAddress(token),
+        amount,
+      }),
       randomness,
     });
     const noteInput = await this.toNoteInput(note);
     const shieldCircuit = (await this.circuits).shield;
     const { witness } = await shieldCircuit.noir.execute({
       owner: note.owner.address,
-      amount: {
-        token: note.token,
-        amount: toNoirU256(note.amount),
-      },
+      amount: await note.amount.toNoir(),
       randomness: note.randomness,
       note_hash: noteInput.noteHash,
     });
@@ -116,15 +115,17 @@ export class PoolErc20Service {
   }) {
     const { Fr } = await import("@aztec/aztec.js");
 
-    assert(utils.isAddressEqual(token, fromNote.token), "invalid token");
+    assert(utils.isAddressEqual(token, fromNote.amount.token), "invalid token");
     const change_randomness = Fr.random().toString();
     const changeNote = await Erc20Note.from({
-      token: fromNote.token,
       owner: fromNote.owner,
-      amount: fromNote.amount - amount,
+      amount: await TokenAmount.from({
+        token: fromNote.amount.token,
+        amount: fromNote.amount.amount - amount,
+      }),
       randomness: change_randomness,
     });
-    assert(changeNote.amount >= 0n, "invalid change note");
+    assert(changeNote.amount.amount >= 0n, "invalid change note");
 
     const nullifier = await fromNote.computeNullifier(secretKey);
 
@@ -182,8 +183,10 @@ export class PoolErc20Service {
 
     const joinNote = await Erc20Note.from({
       owner: await CompleteWaAddress.fromSecretKey(secretKey),
-      token: notes[0]!.token,
-      amount: notes.reduce((acc, note) => acc + note.amount, 0n),
+      amount: await TokenAmount.from({
+        token: notes[0]!.amount.token,
+        amount: notes.reduce((acc, note) => acc + note.amount.amount, 0n),
+      }),
       randomness: join_randomness,
     });
 
@@ -227,16 +230,20 @@ export class PoolErc20Service {
       change_randomness,
     };
     const changeNote = await Erc20Note.from({
-      token: fromNote.token,
       owner: fromNote.owner,
-      amount: fromNote.amount - amount,
+      amount: await TokenAmount.from({
+        token: fromNote.amount.token,
+        amount: fromNote.amount.amount - amount,
+      }),
       randomness: change_randomness,
     });
-    assert(changeNote.amount >= 0n, "invalid change note");
+    assert(changeNote.amount.amount >= 0n, "invalid change note");
     const toNote = await Erc20Note.from({
-      token: fromNote.token,
       owner: to,
-      amount,
+      amount: await TokenAmount.from({
+        token: fromNote.amount.token,
+        amount,
+      }),
       randomness: to_randomness,
     });
     // console.log("input\n", JSON.stringify(input));
@@ -287,14 +294,14 @@ export class PoolErc20Service {
 
   async balanceOf(token: ethers.AddressLike, secretKey: string) {
     const notes = await this.getBalanceNotesOf(token, secretKey);
-    return notes.reduce((acc, note) => acc + note.amount, 0n);
+    return notes.reduce((acc, note) => acc + note.amount.amount, 0n);
   }
 
   async getBalanceNotesOf(token: ethers.AddressLike, secretKey: string) {
     token = await ethers.resolveAddress(token);
     const notes = await this.getEmittedNotes(secretKey);
     return notes.filter(
-      (note) => note.token.toLowerCase() === token.toLowerCase(),
+      (note) => note.amount.token.toLowerCase() === token.toLowerCase(),
     );
   }
 
@@ -406,8 +413,10 @@ export class PoolErc20Service {
           this.toNoteInput(
             await Erc20Note.from({
               owner: to,
-              token: amount.token,
-              amount: BigInt(amount.amount),
+              amount: await TokenAmount.from({
+                token: amount.token,
+                amount: BigInt(amount.amount),
+              }),
               randomness: to_randomness[i]!,
             }),
           ),
@@ -423,11 +432,17 @@ export class PoolErc20Service {
         notesOutNotPadded.map(async (note, i) => {
           const changeNote = await Erc20Note.from({
             owner: from,
-            token: note.token,
-            amount: BigInt(note.amount) - BigInt(amounts_out[i]!.amount),
+            amount: await TokenAmount.from({
+              token: note.amount.token,
+              amount:
+                BigInt(note.amount.amount) - BigInt(amounts_out[i]!.amount),
+            }),
             randomness: change_randomness[i]!,
           });
-          assert(changeNote.amount >= 0n, "change note value must be positive");
+          assert(
+            changeNote.amount.amount >= 0n,
+            "change note value must be positive",
+          );
           return this.toNoteInput(changeNote);
         }),
       ),
@@ -567,42 +582,32 @@ export class PoolErc20Service {
 export class Erc20Note {
   constructor(
     readonly owner: CompleteWaAddress,
-    readonly token: string,
-    readonly amount: bigint,
+    readonly amount: TokenAmount,
     readonly randomness: string,
   ) {}
 
   static async from(params: {
     owner: CompleteWaAddress;
-    token: string;
-    amount: bigint;
+    amount: TokenAmount;
     randomness: string;
   }) {
-    return new Erc20Note(
-      params.owner,
-      params.token,
-      params.amount,
-      params.randomness,
-    );
+    return new Erc20Note(params.owner, params.amount, params.randomness);
   }
 
   async toNoir() {
     return {
       owner: this.owner.address,
-      amount: {
-        token: this.token,
-        amount: toNoirU256(this.amount),
-      },
+      amount: await this.amount.toNoir(),
       randomness: this.randomness,
     };
   }
 
   async serialize(): Promise<bigint[]> {
-    const value = toNoirU256(this.amount);
+    const amount = await this.amount.toNoir();
     return [
       BigInt(this.owner.address),
-      BigInt(this.token),
-      ...value.limbs.map((x) => BigInt(x)),
+      BigInt(this.amount.token),
+      ...amount.amount.limbs.map((x) => BigInt(x)),
       BigInt(this.randomness),
     ];
   }
@@ -617,8 +622,10 @@ export class Erc20Note {
         ethers.zeroPadValue(fieldsStr[0]!, 32),
         publicKey,
       ),
-      token: ethers.zeroPadValue(fieldsStr[1]!, 20),
-      amount: fromNoirU256({ limbs: fields.slice(2, 2 + U256_LIMBS) }),
+      amount: await TokenAmount.from({
+        token: ethers.zeroPadValue(fieldsStr[1]!, 20),
+        amount: fromNoirU256({ limbs: fields.slice(2, 2 + U256_LIMBS) }),
+      }),
       randomness: ethers.zeroPadValue(fieldsStr[2 + U256_LIMBS]!, 32),
     });
   }
@@ -642,8 +649,7 @@ export class Erc20Note {
   static async empty() {
     return await Erc20Note.from({
       owner: new CompleteWaAddress(ethers.ZeroHash, ethers.ZeroHash),
-      token: ethers.ZeroHash,
-      amount: 0n,
+      amount: await TokenAmount.empty(),
       randomness: ethers.ZeroHash,
     });
   }
@@ -692,6 +698,10 @@ export class TokenAmount {
 
   static async from(params: { token: string; amount: bigint }) {
     return new TokenAmount(params.token, params.amount);
+  }
+
+  static async empty(): Promise<TokenAmount> {
+    return await TokenAmount.from({ token: ethers.ZeroHash, amount: 0n });
   }
 
   async toNoir() {

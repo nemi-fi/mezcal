@@ -28,8 +28,8 @@
     );
     assert(
       note &&
-        utils.isAddressEqual(note.token, amount.currency.address) &&
-        note.value >= BigInt(amount.quotient.toString()),
+        utils.isAddressEqual(note.amount.token, amount.currency.address) &&
+        note.amount.amount >= BigInt(amount.quotient.toString()),
       "not enough balance",
     );
     const to = sdk.CompleteWaAddress.fromString(formData.to);
