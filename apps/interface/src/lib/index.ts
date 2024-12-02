@@ -42,13 +42,13 @@ const contract = PoolERC20__factory.connect(
   deployments[chainId].contracts.PoolERC20,
   relayer,
 );
-const interfaceSdk = sdk.createInterfaceSdk(contract, {
+const coreSdk = sdk.createCoreSdk(contract);
+const interfaceSdk = sdk.createInterfaceSdk(coreSdk, {
   shield: import("@repo/contracts/noir/target/shield.json"),
   unshield: import("@repo/contracts/noir/target/unshield.json"),
   join: import("@repo/contracts/noir/target/join.json"),
   transfer: import("@repo/contracts/noir/target/transfer.json"),
   execute: import("@repo/contracts/noir/target/execute.json"),
-  rollup: import("@repo/contracts/noir/target/rollup.json"),
 });
 const reown = new ReownService(contract);
 const evm = new EvmAccountService();
@@ -61,5 +61,6 @@ export const lib = {
   provider,
   reown,
   evm,
+  ...coreSdk,
   ...interfaceSdk,
 };

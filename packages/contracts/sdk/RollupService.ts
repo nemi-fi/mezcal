@@ -57,7 +57,6 @@ export class PoolErc20Service {
       join: NoirAndBackend;
       transfer: NoirAndBackend;
       execute: NoirAndBackend;
-      rollup: NoirAndBackend;
     }>,
   ) {}
 

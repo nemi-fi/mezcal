@@ -1,8 +1,11 @@
+import type { UltraPlonkBackend } from "@aztec/bb.js";
+import { utils } from "@repo/utils";
 import { ethers } from "ethers";
 import { mapValues } from "lodash-es";
 import type { AsyncOrSync } from "ts-essentials";
 import type { PoolERC20 } from "../typechain-types/index.js";
 import { EncryptionService } from "./EncryptionService.js";
+import { NativeUltraPlonkBackend } from "./NativeUltraPlonkBackend.js";
 import { RollupService } from "./RollupOnlyService.js";
 import { PoolErc20Service } from "./RollupService.js";
 import { TreesService } from "./TreesService.js";
@@ -12,25 +15,55 @@ export * from "./NonMembershipTree.js";
 export * from "./RollupService.js";
 export * from "./TreesService.js";
 
+export function createCoreSdk(contract: PoolERC20) {
+  const trees = new TreesService(contract);
+  const encryption = EncryptionService.getSingleton();
+  return {
+    contract,
+    trees,
+    encryption,
+  };
+}
+
 export function createInterfaceSdk(
-  contract: PoolERC20,
+  coreSdk: ReturnType<typeof createCoreSdk>,
   compiledCircuits: Record<
-    "shield" | "unshield" | "join" | "transfer" | "execute" | "rollup",
+    "shield" | "unshield" | "join" | "transfer" | "execute",
     AsyncOrSync<CompiledCircuit>
   >,
 ) {
-  const trees = new TreesService(contract);
-  const encryption = EncryptionService.getSingleton();
   const circuits = ethers.resolveProperties(
     mapValues(compiledCircuits, getCircuit),
   );
-  const poolErc20 = new PoolErc20Service(contract, encryption, trees, circuits);
-  const rollup = new RollupService(contract, trees, circuits);
+  const poolErc20 = new PoolErc20Service(
+    coreSdk.contract,
+    coreSdk.encryption,
+    coreSdk.trees,
+    circuits,
+  );
+
   return {
-    trees,
     poolErc20,
+  };
+}
+
+export function createBackendSdk(
+  coreSdk: ReturnType<typeof createCoreSdk>,
+  compiledCircuits: Record<"rollup", AsyncOrSync<CompiledCircuit>>,
+) {
+  const rollup = new RollupService(coreSdk.contract, coreSdk.trees, {
+    rollup: utils.iife(async () => {
+      const { Noir } = await import("@noir-lang/noir_js");
+      const noir = new Noir(await compiledCircuits.rollup);
+      const backend = new NativeUltraPlonkBackend(
+        `${process.env.HOME}/.bb/bb`,
+        await compiledCircuits.rollup,
+      ) as unknown as UltraPlonkBackend;
+      return { noir, backend };
+    }),
+  });
+  return {
     rollup,
-    encryption,
   };
 }
 

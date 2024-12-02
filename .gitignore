@@ -15,5 +15,6 @@ codegenCache.json
 
 artifacts
 cache
+target
 
 **/target/*.bak
