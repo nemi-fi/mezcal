@@ -114,7 +114,10 @@
         Private address:
         <Ui.Query query={$waAddress}>
           {#snippet success(data)}
-            {data}
+            {#if data}
+              {utils.shortAddress(data)}
+              <Ui.CopyButton text={data} variant="ghost" size="icon" />
+            {/if}
           {/snippet}
         </Ui.Query>
       </div>
@@ -171,25 +174,17 @@
           <!-- {@render balancesBlock(data)} -->
           <div class="flex flex-col gap-2">
             {#each data as balance}
-              <div class="flex gap-2">
-                <div class="flex-1">
-                  <span class="text-sm font-bold">
-                    {balance.balance.currency.symbol}
-                  </span>
-                </div>
-                <div class="flex-1">
-                  <span class="text-lg font-bold">
-                    {balance.balance.toExact()}
-                    {#if balance.fractions.length > 1}
-                      {#each balance.fractions as fraction, i}
-                        {#if i > 0}
-                          +
-                        {/if}
-                        ({fraction.toExact()})
-                      {/each}
+              <div>
+                {balance.balance.currency.symbol}
+                <span class="font-bold">{balance.balance.toExact()}</span>
+                {#if balance.fractions.length > 1}
+                  {#each balance.fractions as fraction, i}
+                    {#if i > 0}
+                      +
                     {/if}
-                  </span>
-                </div>
+                    ({fraction.toExact()})
+                  {/each}
+                {/if}
               </div>
             {/each}
           </div>
@@ -214,17 +209,11 @@
 {#snippet balancesBlock(data: CurrencyAmount<Token>[])}
   <div class="flex flex-col gap-2">
     {#each data as balance}
-      <div class="flex gap-2">
-        <div class="flex-1">
-          <span class="text-sm font-bold">
-            {balance.currency.symbol}
-          </span>
-        </div>
-        <div class="flex-1">
-          <span class="text-lg font-bold">
-            {balance.toExact()}
-          </span>
-        </div>
+      <div>
+        {balance.currency.symbol}
+        <span class="font-bold">
+          {balance.toExact()}
+        </span>
       </div>
     {/each}
   </div>

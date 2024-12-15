@@ -1,5 +1,7 @@
 # Waztec
 
+Walmart version of [Aztec](https://aztec.network).
+
 ## TODO
 
 ### contracts and circuits
@@ -16,7 +18,7 @@
 - [x] PublicInputsBuilder
 - [ ] deploy as proxy
 - [ ] test contracts with larger token amounts
-- [ ] Rename ValueNote to Erc20Note and namespace all erc20 circuit names
+- [x] Rename ValueNote to Erc20Note and namespace all erc20 circuit names
 - [ ] Make PoolGeneric permissionless and make PoolERC20.execute permissionless (if possible)
 
 ### Backend
@@ -28,12 +30,12 @@
 ### UI
 
 - [x] shield
-- [ ] transfer
+- [x] transfer
 - [ ] join (maybe behind the scenes, multicall)
 - [ ] unshield
 - [ ] wallet connect to interact with dapps
 
-### compliance
+### compliance (so I don't go to jail)
 
 - [ ] unshield only mode
 - [ ] set shield limit to 10 USDC
