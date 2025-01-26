@@ -218,6 +218,7 @@ describe("PoolERC20", () => {
     expect(pendingTxsAfter).to.deep.equal([
       [
         false, // rolledUp
+        await pool.getAddress(),
         [
           // note hashes
           await changeNote.innerHash(),

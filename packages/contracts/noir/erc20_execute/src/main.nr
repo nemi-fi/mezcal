@@ -5,7 +5,7 @@ struct Result {
 }
 
 fn main(
-    tree_roots: pub common::TreeRoots,
+    context: pub common::Context,
     // accounts
     from_secret_key: Field,
     to_address: Field,
@@ -34,13 +34,13 @@ fn main(
                 let amount_out = amounts_out[i];
                 if (note_input.note.is_set()) {
                     let (nullifier, change_note) = common::Erc20Note::consume_and_sub(
+                        context,
                         note_input,
                         amount_out,
                         change_randomness[i],
-                        tree_roots,
                         from_secret_key,
                     );
-                    (change_note.hash(), nullifier)
+                    (change_note.inner_hash(), nullifier)
                 } else {
                     assert_eq(amount_out.amount, common::U256::new(), f"invalid amount at {i}");
                     (0, 0)
@@ -57,7 +57,8 @@ fn main(
     // emit new note hashes
     let note_hashes_in = amounts_in.enumerate().map(|(i, amount): (u32, common::TokenAmount)| {
         if (amount.amount != common::U256::new()) {
-            common::Erc20Note { owner: to_address, amount, randomness: to_randomness[i] }.hash()
+            common::Erc20Note { owner: to_address, amount, randomness: to_randomness[i] }
+                .inner_hash()
         } else {
             0
         }
