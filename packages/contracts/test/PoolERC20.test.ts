@@ -220,8 +220,8 @@ describe("PoolERC20", () => {
         false, // rolledUp
         [
           // note hashes
-          await changeNote.hash(),
-          await toNote.hash(),
+          await changeNote.innerHash(),
+          await toNote.innerHash(),
         ],
         [
           // nullifiers

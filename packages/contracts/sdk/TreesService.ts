@@ -33,6 +33,7 @@ export class TreesService {
   // TODO(privacy): this reveals link between noteHash and nullifier to the backend. Can we move this to frontend or put backend inside a TEE?
   getNoteConsumptionInputs = z
     .function()
+    // TODO(correctness): this should accept siloed note hash and nullifier
     .args(z.object({ noteHash: z.string(), nullifier: z.string() }))
     .implement(async (params) => {
       const { Fr } = await import("@aztec/aztec.js");

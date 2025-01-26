@@ -11,13 +11,15 @@ impl Erc20Note {
     }
 
     pub fn consume_and_sub(
+        context: crate::Context,
         note_consumption: crate::NoteConsumptionInputs,
         amount: crate::TokenAmount,
         randomness: Field,
         tree_roots: crate::TreeRoots,
         secret_key: Field,
     ) -> (Field, Self) {
-        let nullifier = crate::consume_owned_note(tree_roots, secret_key, note_consumption);
+        let nullifier =
+            crate::consume_owned_note(context, tree_roots, secret_key, note_consumption);
         let change_note = Self {
             owner: note_consumption.note.owner,
             amount: note_consumption.note.amount - amount,
@@ -32,7 +34,7 @@ impl crate::Note<6> for Erc20Note {
         [self.owner, self.amount.token].concat(self.amount.amount.limbs).concat([self.randomness])
     }
 
-    fn hash(self) -> Field {
+    fn inner_hash(self) -> Field {
         let serialized = self.serialize();
         // TODO(security): use poseidon2_hash_with_separator
         std::hash::poseidon2::Poseidon2::hash(serialized, serialized.len())

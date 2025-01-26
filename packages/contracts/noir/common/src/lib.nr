@@ -1,11 +1,13 @@
 use bignum::{BigNum, fields::U256::U256Params};
 use protocol_types::hash::poseidon2_hash_with_separator;
 
+mod context;
 mod note;
 mod owned_note;
 mod value_note;
 mod silo;
 
+pub use context::Context;
 pub use note::Note;
 pub use owned_note::{consume_owned_note, NoteConsumptionInputs, OwnedNote};
 pub use silo::{NoteHashToSilo, NullifierToSilo};

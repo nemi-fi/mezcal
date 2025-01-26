@@ -4,8 +4,8 @@ fn main(
     owner: WaAddress,
     amount: pub common::TokenAmount,
     randomness: Field,
-    note_hash: pub Field,
+    inner_note_hash: pub Field,
 ) {
     let note = common::Erc20Note { owner, amount, randomness };
-    assert(note.hash() == note_hash, "invalid note hash");
+    assert(note.inner_hash() == inner_note_hash, "invalid inner note hash");
 }

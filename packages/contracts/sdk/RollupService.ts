@@ -92,7 +92,7 @@ export class PoolErc20Service {
       owner: note.owner.address,
       amount: await note.amount.toNoir(),
       randomness: note.randomness,
-      note_hash: noteInput.noteHash,
+      inner_note_hash: noteInput.innerNoteHash,
     });
     const { proof } = await shieldCircuit.backend.generateProof(witness);
     console.timeEnd("shield generateProof");
@@ -131,7 +131,7 @@ export class PoolErc20Service {
     });
     assert(changeNote.amount.amount >= 0n, "invalid change note");
 
-    const nullifier = await fromNote.computeNullifier(secretKey);
+    const nullifier = await fromNote.computeInnerNullifier(secretKey);
 
     const unshieldCircuit = (await this.circuits).unshield;
     console.time("unshield generateProof");
@@ -149,7 +149,7 @@ export class PoolErc20Service {
       change_randomness,
       // return
       nullifier: nullifier.toString(),
-      change_note_hash: await changeNote.hash(),
+      change_note_hash: await changeNote.innerHash(),
     });
     const { proof } = await unshieldCircuit.backend.generateProof(witness);
     console.timeEnd("unshield generateProof");
@@ -198,7 +198,7 @@ export class PoolErc20Service {
       proof,
       (await Promise.all(
         notes.map(async (note) =>
-          (await note.computeNullifier(secretKey)).toString(),
+          (await note.computeInnerNullifier(secretKey)).toString(),
         ),
       )) as any,
       await this.toNoteInput(joinNote),
@@ -220,7 +220,7 @@ export class PoolErc20Service {
   }) {
     const { Fr } = await import("@aztec/aztec.js");
 
-    const nullifier = await fromNote.computeNullifier(secretKey);
+    const nullifier = await fromNote.computeInnerNullifier(secretKey);
 
     const to_randomness = Fr.random().toString();
     const change_randomness = Fr.random().toString();
@@ -257,8 +257,8 @@ export class PoolErc20Service {
     {
       const expectedReturnValue = {
         nullifier: nullifier.toString(),
-        change_note_hash: await changeNote.hash(),
-        to_note_hash: await toNote.hash(),
+        change_note_hash: await changeNote.innerHash(),
+        to_note_hash: await toNote.innerHash(),
       };
       const patchedReturnValue = {
         ...(returnValue as any),
@@ -414,10 +414,6 @@ export class PoolErc20Service {
         },
       },
     );
-    const emptyNoteInput = {
-      noteHash: ethers.ZeroHash,
-      encryptedNote: ethers.ZeroHash,
-    };
     const notes_in = utils.arrayPadEnd(
       await Promise.all(
         amountsIn.map(async (amount, i) =>
@@ -434,7 +430,7 @@ export class PoolErc20Service {
         ),
       ),
       MAX_TOKENS_IN_PER_EXECUTION,
-      emptyNoteInput,
+      await this.emptyNoteInput(),
     );
 
     const from = await CompleteWaAddress.fromSecretKey(fromSecretKey);
@@ -458,12 +454,12 @@ export class PoolErc20Service {
         }),
       ),
       MAX_TOKENS_OUT_PER_EXECUTION,
-      emptyNoteInput,
+      await this.emptyNoteInput(),
     );
     const nullifiers = utils.arrayPadEnd(
       await Promise.all(
         notesOutNotPadded.map(async (note) => {
-          return (await note.computeNullifier(fromSecretKey)).toString();
+          return (await note.computeInnerNullifier(fromSecretKey)).toString();
         }),
       ),
       MAX_TOKENS_OUT_PER_EXECUTION,
@@ -527,9 +523,9 @@ export class PoolErc20Service {
   }
 
   async toNoteConsumptionInputs(secretKey: string, note: Erc20Note) {
-    const nullifier = await note.computeNullifier(secretKey);
+    const nullifier = await note.computeInnerNullifier(secretKey);
     const noteConsumptionInputs = await this.trees.getNoteConsumptionInputs({
-      noteHash: await note.hash(),
+      noteHash: await note.innerHash(),
       nullifier: nullifier.toString(),
     });
     return {
@@ -540,8 +536,15 @@ export class PoolErc20Service {
 
   async toNoteInput(note: Erc20Note) {
     return {
-      noteHash: await note.hash(),
+      innerNoteHash: await note.innerHash(),
       encryptedNote: await note.encrypt(),
+    };
+  }
+
+  async emptyNoteInput() {
+    return {
+      innerNoteHash: ethers.ZeroHash,
+      encryptedNote: ethers.ZeroHash,
     };
   }
 
@@ -564,17 +567,23 @@ export class PoolErc20Service {
       }
 
       const noteHashRolledUp: boolean =
-        (await this.contract.noteHashState(await note.hash())) ===
-        NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP;
+        (await this.contract.noteHashState(
+          await this.contract.getAddress(),
+          await note.innerHash(),
+        )) === NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP;
       if (!noteHashRolledUp) {
         return undefined;
       }
 
       // if nullified
-      const nullifier = (await note.computeNullifier(secretKey)).toString();
+      const innerNullifier = (
+        await note.computeInnerNullifier(secretKey)
+      ).toString();
       const nullifierExists =
-        (await this.contract.nullifierState(nullifier)) ===
-        NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP;
+        (await this.contract.nullifierState(
+          await this.contract.getAddress(),
+          innerNullifier,
+        )) === NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP;
       if (nullifierExists) {
         return undefined;
       }
@@ -641,18 +650,18 @@ export class Erc20Note {
     });
   }
 
-  async hash() {
+  async innerHash() {
     return (await poseidon2Hash(await this.serialize())).toString();
   }
 
-  async computeNullifier(secretKey: string) {
+  async computeInnerNullifier(secretKey: string) {
     assert(
       (await CompleteWaAddress.fromSecretKey(secretKey)).equal(this.owner),
       "invalid nullifier secret key",
     );
     return await poseidon2Hash([
       GENERATOR_INDEX__NOTE_NULLIFIER,
-      await this.hash(),
+      await this.innerHash(),
       secretKey,
     ]);
   }

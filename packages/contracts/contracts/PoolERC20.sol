@@ -59,7 +59,7 @@ contract PoolERC20 is PoolGeneric {
         PublicInputs.Type memory pi = PublicInputs.create(2 + U256_LIMBS);
         pi.push(address(token));
         pi.pushUint256Limbs(amount);
-        pi.push(note.noteHash);
+        pi.push(note.innerNoteHash);
         require(
             _poolErc20Storage().shieldVerifier.verify(proof, pi.finish()),
             "Invalid shield proof"
@@ -90,7 +90,7 @@ contract PoolERC20 is PoolGeneric {
         pi.pushUint256Limbs(amount);
         // result
         pi.push(nullifier);
-        pi.push(changeNote.noteHash);
+        pi.push(changeNote.innerNoteHash);
         require(
             _poolErc20Storage().unshieldVerifier.verify(proof, pi.finish()),
             "Invalid unshield proof"
@@ -121,7 +121,7 @@ contract PoolERC20 is PoolGeneric {
         for (uint256 i = 0; i < MAX_NOTES_TO_JOIN; i++) {
             pi.push(nullifiers[i]);
         }
-        pi.push(joinNote.noteHash);
+        pi.push(joinNote.innerNoteHash);
         require(
             _poolErc20Storage().joinVerifier.verify(proof, pi.finish()),
             "Invalid join proof"
@@ -148,8 +148,8 @@ contract PoolERC20 is PoolGeneric {
         pi.push(getNoteHashTree().root);
         pi.push(getNullifierTree().root);
         pi.push(nullifier);
-        pi.push(changeNote.noteHash);
-        pi.push(toNote.noteHash);
+        pi.push(changeNote.innerNoteHash);
+        pi.push(toNote.innerNoteHash);
         require(
             _poolErc20Storage().transferVerifier.verify(proof, pi.finish()),
             "Invalid transfer proof"
@@ -210,11 +210,11 @@ contract PoolERC20 is PoolGeneric {
         }
         // note hashes in
         for (uint256 i = 0; i < noteInputs.length; i++) {
-            pi.push(noteInputs[i].noteHash);
+            pi.push(noteInputs[i].innerNoteHash);
         }
         // change note hashes out
         for (uint256 i = 0; i < changeNoteInputs.length; i++) {
-            pi.push(changeNoteInputs[i].noteHash);
+            pi.push(changeNoteInputs[i].innerNoteHash);
         }
         // nullifiers out
         for (uint256 i = 0; i < nullifiers.length; i++) {
@@ -247,12 +247,12 @@ contract PoolERC20 is PoolGeneric {
             );
             uint256 noteInputsI = 0;
             for (uint256 i = 0; i < noteInputs.length; i++) {
-                if (noteInputs[i].noteHash != 0) {
+                if (noteInputs[i].innerNoteHash != 0) {
                     noteInputsDyn[noteInputsI++] = noteInputs[i];
                 }
             }
             for (uint256 i = 0; i < changeNoteInputs.length; i++) {
-                if (changeNoteInputs[i].noteHash != 0) {
+                if (changeNoteInputs[i].innerNoteHash != 0) {
                     noteInputsDyn[noteInputsI++] = changeNoteInputs[i];
                 }
             }

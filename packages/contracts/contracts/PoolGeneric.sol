@@ -102,7 +102,7 @@ contract PoolGeneric {
         }
 
         PublicInputs.Type memory pi = PublicInputs.create(
-            (MAX_NOTES_PER_ROLLUP + 4) + (MAX_NULLIFIERS_PER_ROLLUP + 4)
+            (2 * MAX_NOTES_PER_ROLLUP + 4) + (2 * MAX_NULLIFIERS_PER_ROLLUP + 4)
         );
         // note hashes
         for (uint256 i = 0; i < pendingNoteHashes.length; i++) {
@@ -183,7 +183,7 @@ contract PoolGeneric {
         PendingTx storage pendingTx = _poolGenericStorage().allPendingTxs[
             _poolGenericStorage().allPendingTxs.length - 1
         ];
-        address siloContractAddress = msg.sender;
+        address siloContractAddress = address(this);
         pendingTx.siloContractAddress = siloContractAddress;
 
         for (uint256 i = 0; i < noteInputs.length; i++) {
