@@ -5,7 +5,7 @@ pragma solidity ^0.8.23;
 type Fr is bytes32;
 
 library FrLib {
-    function from(bytes32 value) internal pure returns (Fr ret) {
+    function tryFrom(bytes32 value) internal pure returns (Fr ret) {
         require(
             value <
                 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001,
@@ -26,5 +26,7 @@ library FrLib {
 
 function keccak256ToFr(bytes memory data) pure returns (Fr) {
     return
-        FrLib.from(bytes32(bytes.concat(bytes1(0), bytes31(keccak256(data)))));
+        FrLib.tryFrom(
+            bytes32(bytes.concat(bytes1(0), bytes31(keccak256(data))))
+        );
 }

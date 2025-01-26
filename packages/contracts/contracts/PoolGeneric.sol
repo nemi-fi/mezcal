@@ -178,7 +178,7 @@ contract PoolGeneric {
         ];
 
         for (uint256 i = 0; i < noteInputs.length; i++) {
-            Fr noteHash = FrLib.from(noteInputs[i].noteHash);
+            Fr noteHash = FrLib.tryFrom(noteInputs[i].noteHash);
             require(
                 _poolGenericStorage().noteHashState[noteHash] ==
                     NOTE_HASH_OR_NULLIFIER_STATE_NOT_EXISTS,
@@ -192,7 +192,7 @@ contract PoolGeneric {
         }
 
         for (uint256 i = 0; i < nullifiers.length; i++) {
-            Fr nullifier = FrLib.from(nullifiers[i]);
+            Fr nullifier = FrLib.tryFrom(nullifiers[i]);
             require(
                 _poolGenericStorage().nullifierState[nullifier] ==
                     NOTE_HASH_OR_NULLIFIER_STATE_NOT_EXISTS,
@@ -229,11 +229,11 @@ contract PoolGeneric {
     }
 
     function noteHashState(bytes32 noteHash) external view returns (uint256) {
-        return _poolGenericStorage().noteHashState[FrLib.from(noteHash)];
+        return _poolGenericStorage().noteHashState[FrLib.tryFrom(noteHash)];
     }
 
     function nullifierState(bytes32 nullifier) external view returns (uint256) {
-        return _poolGenericStorage().nullifierState[FrLib.from(nullifier)];
+        return _poolGenericStorage().nullifierState[FrLib.tryFrom(nullifier)];
     }
 
     function _poolGenericStorage()
