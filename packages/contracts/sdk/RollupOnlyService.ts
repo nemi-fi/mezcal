@@ -4,7 +4,7 @@ import { utils } from "@repo/utils";
 import assert from "assert";
 import { ethers } from "ethers";
 import type { AsyncOrSync } from "ts-essentials";
-import type { PoolERC20 } from "../typechain-types";
+import type { PoolGeneric } from "../typechain-types";
 import {
   INCLUDE_UNCOMMITTED,
   MAX_NOTES_PER_ROLLUP,
@@ -16,7 +16,7 @@ import type { TreesService } from "./TreesService";
 
 export class RollupService {
   constructor(
-    private contract: PoolERC20,
+    private contract: PoolGeneric,
     private trees: TreesService,
     private circuits: {
       rollup: AsyncOrSync<NoirAndBackend>;

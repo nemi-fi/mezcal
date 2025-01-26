@@ -4,10 +4,12 @@ declare module "hardhat/types/runtime" {
   interface TypedHardhatDeployNames {
     MockUSDC: "MockERC20";
     MockBTC: "MockERC20";
+    MockPoolGeneric: "MockPoolGeneric";
   }
 }
 
 const deploy: DeployFunction = async ({
+  deployments,
   typedDeployments,
   safeGetNamedAccounts,
 }) => {
@@ -25,6 +27,13 @@ const deploy: DeployFunction = async ({
     log: true,
     args: ["Bitcoin", "BTC"],
     contract: "MockERC20",
+  });
+
+  await typedDeployments.deploy("MockPoolGeneric", {
+    from: deployer,
+    log: true,
+    args: [(await deployments.get("RollupVerifier")).address],
+    contract: "MockPoolGeneric",
   });
 };
 

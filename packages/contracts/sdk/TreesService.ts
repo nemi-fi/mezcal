@@ -4,7 +4,7 @@ import { ethers } from "ethers";
 import { isEqual, orderBy, range, times } from "lodash-es";
 import { assert } from "ts-essentials";
 import { z } from "zod";
-import type { PoolERC20 } from "../typechain-types";
+import type { PoolGeneric } from "../typechain-types";
 import { NonMembershipTree } from "./NonMembershipTree";
 import {
   INCLUDE_UNCOMMITTED,
@@ -15,7 +15,7 @@ import {
 } from "./RollupService";
 
 export class TreesService {
-  constructor(private contract: PoolERC20) {}
+  constructor(private contract: PoolGeneric) {}
 
   getTreeRoots = z
     .function()

@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import { mapValues } from "lodash-es";
 import type { AsyncOrSync } from "ts-essentials";
-import type { PoolERC20 } from "../typechain-types/index.js";
+import type { PoolERC20, PoolGeneric } from "../typechain-types/index.js";
 import { EncryptionService } from "./EncryptionService.js";
 import { type ITreesService } from "./RemoteTreesService.js";
 import { PoolErc20Service } from "./RollupService.js";
@@ -12,7 +12,7 @@ export * from "./RemoteTreesService.js";
 export * from "./RollupService.js";
 export * from "./TreesService.js";
 
-export function createCoreSdk(contract: PoolERC20) {
+export function createCoreSdk<T extends PoolGeneric>(contract: T) {
   const encryption = EncryptionService.getSingleton();
   return {
     contract,
@@ -21,7 +21,7 @@ export function createCoreSdk(contract: PoolERC20) {
 }
 
 export function createInterfaceSdk(
-  coreSdk: ReturnType<typeof createCoreSdk>,
+  coreSdk: ReturnType<typeof createCoreSdk<PoolERC20>>,
   trees: ITreesService,
   compiledCircuits: Record<
     "shield" | "unshield" | "join" | "transfer" | "execute",
