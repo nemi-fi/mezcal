@@ -5,7 +5,7 @@ pub struct Erc20Note {
 }
 
 impl Erc20Note {
-    // TODO: remove this in favour of BoundedVec<Erc20Note, MAX_LEN>
+    // TODO(security): remove this in favour of BoundedVec<Erc20Note, MAX_LEN>
     pub fn is_set(self) -> bool {
         (self.owner != 0) & (self.amount.amount != crate::U256::new())
     }
@@ -34,6 +34,7 @@ impl crate::Note<6> for Erc20Note {
 
     fn hash(self) -> Field {
         let serialized = self.serialize();
+        // TODO(security): use poseidon2_hash_with_separator
         std::hash::poseidon2::Poseidon2::hash(serialized, serialized.len())
     }
 }
