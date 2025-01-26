@@ -15,11 +15,9 @@ impl Erc20Note {
         note_consumption: crate::NoteConsumptionInputs,
         amount: crate::TokenAmount,
         randomness: Field,
-        tree_roots: crate::TreeRoots,
         secret_key: Field,
     ) -> (Field, Self) {
-        let nullifier =
-            crate::consume_owned_note(context, tree_roots, secret_key, note_consumption);
+        let nullifier = crate::consume_owned_note(context, secret_key, note_consumption);
         let change_note = Self {
             owner: note_consumption.note.owner,
             amount: note_consumption.note.amount - amount,

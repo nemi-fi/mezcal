@@ -86,8 +86,3 @@ impl std::ops::Sub for TokenAmount {
         Self { token: self.token, amount: self.amount - other.amount }
     }
 }
-
-pub struct TreeRoots {
-    pub note_hash_root: Field,
-    pub nullifier_root: Field,
-}

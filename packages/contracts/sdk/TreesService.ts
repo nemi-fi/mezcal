@@ -6,6 +6,7 @@ import { assert } from "ts-essentials";
 import { z } from "zod";
 import type { PoolGeneric } from "../typechain-types";
 import { NonMembershipTree } from "./NonMembershipTree";
+import { NoteHashToSilo, NullifierToSilo } from "./RollupOnlyService";
 import {
   INCLUDE_UNCOMMITTED,
   MAX_NULLIFIERS_PER_ROLLUP,
@@ -17,12 +18,14 @@ import {
 export class TreesService {
   constructor(private contract: PoolGeneric) {}
 
+  // TODO: rename to `getContext`
   getTreeRoots = z
     .function()
     .args()
     .implement(async () => {
       const { noteHashTree, nullifierTree } = await this.getTrees();
       return {
+        this_address: await this.contract.getAddress(),
         note_hash_root: ethers.hexlify(
           noteHashTree.getRoot(INCLUDE_UNCOMMITTED),
         ),
@@ -33,7 +36,6 @@ export class TreesService {
   // TODO(privacy): this reveals link between noteHash and nullifier to the backend. Can we move this to frontend or put backend inside a TEE?
   getNoteConsumptionInputs = z
     .function()
-    // TODO(correctness): this should accept siloed note hash and nullifier
     .args(z.object({ noteHash: z.string(), nullifier: z.string() }))
     .implement(async (params) => {
       const { Fr } = await import("@aztec/aztec.js");
@@ -71,15 +73,27 @@ export class TreesService {
 
   async #getNoteHashTree() {
     const { Fr } = await import("@aztec/aztec.js");
-    const noteHashes = sortEventsWithIndex(
+    const events = sortEventsWithIndex(
       await this.contract.queryFilter(this.contract.filters.NoteHashes()),
-    ).map((x) => x.noteHashes);
+    );
+    const noteHashes = await Promise.all(
+      events.map((x) =>
+        Promise.all(
+          x.noteHashes.map(async (n) =>
+            Fr.fromString(
+              await new NoteHashToSilo(
+                n.siloContractAddress,
+                n.innerNoteHash,
+              ).siloedHash(),
+            ),
+          ),
+        ),
+      ),
+    );
 
     const noteHashTree = await createMerkleTree(NOTE_HASH_TREE_HEIGHT);
     if (noteHashes.length > 0) {
-      await noteHashTree.appendLeaves(
-        noteHashes.flat().map((h) => new Fr(BigInt(h))),
-      );
+      await noteHashTree.appendLeaves(noteHashes.flat());
       await noteHashTree.commit();
     }
     return noteHashTree;
@@ -88,9 +102,23 @@ export class TreesService {
   async #getNullifierTree() {
     const { Fr } = await import("@aztec/aztec.js");
 
-    const nullifiers = sortEventsWithIndex(
+    const events = sortEventsWithIndex(
       await this.contract.queryFilter(this.contract.filters.Nullifiers()),
-    ).map((x) => x.nullifiers.map((n) => new Fr(BigInt(n))));
+    );
+    const nullifiers = await Promise.all(
+      events.map((x) =>
+        Promise.all(
+          x.nullifiers.map(async (n) =>
+            Fr.fromString(
+              await new NullifierToSilo(
+                n.siloContractAddress,
+                n.innerNullifier,
+              ).siloedHash(),
+            ),
+          ),
+        ),
+      ),
+    );
 
     const initialNullifiersSeed = new Fr(
       0x08a1735994d16db43c2373d0258b8f4d82ae162c297687bba68aa8a3912b042dn,

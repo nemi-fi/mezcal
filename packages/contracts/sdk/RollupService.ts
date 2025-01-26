@@ -9,6 +9,7 @@ import { PoolERC20__factory, type PoolERC20 } from "../typechain-types";
 import type { ExecutionStruct } from "../typechain-types/contracts/PoolERC20";
 import { EncryptionService } from "./EncryptionService";
 import type { ITreesService } from "./RemoteTreesService";
+import { NoteHashToSilo, NullifierToSilo } from "./RollupOnlyService";
 import { fromNoirU256, keccak256ToFr, toNoirU256, U256_LIMBS } from "./utils";
 
 // Note: keep in sync with other languages
@@ -136,7 +137,7 @@ export class PoolErc20Service {
     const unshieldCircuit = (await this.circuits).unshield;
     console.time("unshield generateProof");
     const { witness } = await unshieldCircuit.noir.execute({
-      tree_roots: await this.trees.getTreeRoots(),
+      context: await this.trees.getTreeRoots(),
       from_secret_key: secretKey,
       from_note_inputs: await this.toNoteConsumptionInputs(secretKey, fromNote),
       to,
@@ -523,10 +524,15 @@ export class PoolErc20Service {
   }
 
   async toNoteConsumptionInputs(secretKey: string, note: Erc20Note) {
-    const nullifier = await note.computeInnerNullifier(secretKey);
     const noteConsumptionInputs = await this.trees.getNoteConsumptionInputs({
-      noteHash: await note.innerHash(),
-      nullifier: nullifier.toString(),
+      noteHash: await new NoteHashToSilo(
+        await this.contract.getAddress(),
+        await note.innerHash(),
+      ).siloedHash(),
+      nullifier: await new NullifierToSilo(
+        await this.contract.getAddress(),
+        (await note.computeInnerNullifier(secretKey)).toString(),
+      ).siloedHash(),
     });
     return {
       ...noteConsumptionInputs,

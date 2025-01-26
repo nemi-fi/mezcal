@@ -183,6 +183,7 @@ contract PoolGeneric {
         PendingTx storage pendingTx = _poolGenericStorage().allPendingTxs[
             _poolGenericStorage().allPendingTxs.length - 1
         ];
+        // TODO(security): change to msg.sender
         address siloContractAddress = address(this);
         pendingTx.siloContractAddress = siloContractAddress;
 

@@ -81,8 +81,9 @@ contract PoolERC20 is PoolGeneric {
         bytes32 nullifier,
         NoteInput calldata changeNote
     ) external {
-        PublicInputs.Type memory pi = PublicInputs.create(6 + U256_LIMBS);
+        PublicInputs.Type memory pi = PublicInputs.create(1 + 6 + U256_LIMBS);
         // params
+        pi.push(address(this));
         pi.push(getNoteHashTree().root);
         pi.push(getNullifierTree().root);
         pi.push(to);

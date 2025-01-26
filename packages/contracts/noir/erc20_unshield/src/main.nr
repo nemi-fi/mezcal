@@ -4,7 +4,7 @@ struct Result {
 }
 
 fn main(
-    tree_roots: pub common::TreeRoots,
+    context: pub common::Context,
     // from
     from_secret_key: Field,
     from_note_inputs: common::NoteConsumptionInputs,
@@ -16,12 +16,12 @@ fn main(
     change_randomness: Field,
 ) -> pub Result {
     let (nullifier, change_note) = common::Erc20Note::consume_and_sub(
+        context,
         from_note_inputs,
         amount,
         change_randomness,
-        tree_roots,
         from_secret_key,
     );
 
-    Result { nullifier, change_note_hash: change_note.hash() }
+    Result { nullifier, change_note_hash: change_note.inner_hash() }
 }
