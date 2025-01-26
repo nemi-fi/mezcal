@@ -111,3 +111,8 @@ library PublicInputs {
         console.log();
     }
 }
+
+struct AppendOnlyTreeSnapshot {
+    bytes32 root;
+    uint32 nextAvailableLeafIndex;
+}

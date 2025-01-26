@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity ^0.8.23;
 
-import {HeaderLib} from "@aztec/l1-contracts/src/core/libraries/HeaderLib.sol";
 import {Fr, FrLib} from "./Fr.sol";
-import {NoteInput, PublicInputs} from "./Utils.sol";
+import {NoteInput, PublicInputs, AppendOnlyTreeSnapshot} from "./Utils.sol";
 import {UltraVerifier as RollupVerifier} from "../noir/target/rollup.sol";
 
 // Note: keep in sync with other languages
@@ -33,10 +32,10 @@ contract PoolGeneric {
     struct PoolGenericStorage {
         RollupVerifier rollupVerifier;
         PendingTx[] allPendingTxs;
-        HeaderLib.AppendOnlyTreeSnapshot noteHashTree;
+        AppendOnlyTreeSnapshot noteHashTree;
         mapping(Fr => uint256) noteHashState; // TODO(perf): nuke this
         uint256 noteHashBatchIndex;
-        HeaderLib.AppendOnlyTreeSnapshot nullifierTree;
+        AppendOnlyTreeSnapshot nullifierTree;
         mapping(Fr => uint256) nullifierState; // TODO(perf): nuke this
         uint256 nullifierBatchIndex;
     }
@@ -75,8 +74,8 @@ contract PoolGeneric {
     function rollup(
         bytes calldata proof,
         uint256[] calldata txIndices,
-        HeaderLib.AppendOnlyTreeSnapshot calldata newNoteHashTree,
-        HeaderLib.AppendOnlyTreeSnapshot calldata newNullifierTree
+        AppendOnlyTreeSnapshot calldata newNoteHashTree,
+        AppendOnlyTreeSnapshot calldata newNullifierTree
     ) external {
         Fr[MAX_NOTES_PER_ROLLUP] memory pendingNoteHashes;
         Fr[MAX_NULLIFIERS_PER_ROLLUP] memory pendingNullifiers;
@@ -216,7 +215,7 @@ contract PoolGeneric {
     function getNoteHashTree()
         public
         view
-        returns (HeaderLib.AppendOnlyTreeSnapshot memory)
+        returns (AppendOnlyTreeSnapshot memory)
     {
         return _poolGenericStorage().noteHashTree;
     }
@@ -224,7 +223,7 @@ contract PoolGeneric {
     function getNullifierTree()
         public
         view
-        returns (HeaderLib.AppendOnlyTreeSnapshot memory)
+        returns (AppendOnlyTreeSnapshot memory)
     {
         return _poolGenericStorage().nullifierTree;
     }

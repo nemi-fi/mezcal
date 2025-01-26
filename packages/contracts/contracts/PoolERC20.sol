@@ -7,11 +7,11 @@ import {Fr, FrLib, keccak256ToFr} from "./Fr.sol";
 import {NoteInput, TokenAmount, Call, Execution, MAX_TOKENS_IN_PER_EXECUTION, MAX_TOKENS_OUT_PER_EXECUTION, PublicInputs, U256_LIMBS} from "./Utils.sol";
 import {RouterERC20} from "./RouterERC20.sol";
 import {PoolGeneric} from "./PoolGeneric.sol";
-import {UltraVerifier as ShieldVerifier} from "../noir/target/shield.sol";
-import {UltraVerifier as UnshieldVerifier} from "../noir/target/unshield.sol";
-import {UltraVerifier as JoinVerifier} from "../noir/target/join.sol";
-import {UltraVerifier as TransferVerifier} from "../noir/target/transfer.sol";
-import {UltraVerifier as ExecuteVerifier} from "../noir/target/execute.sol";
+import {UltraVerifier as ShieldVerifier} from "../noir/target/erc20_shield.sol";
+import {UltraVerifier as UnshieldVerifier} from "../noir/target/erc20_unshield.sol";
+import {UltraVerifier as JoinVerifier} from "../noir/target/erc20_join.sol";
+import {UltraVerifier as TransferVerifier} from "../noir/target/erc20_transfer.sol";
+import {UltraVerifier as ExecuteVerifier} from "../noir/target/erc20_execute.sol";
 import {UltraVerifier as RollupVerifier} from "../noir/target/rollup.sol";
 
 // Note: keep in sync with other languages

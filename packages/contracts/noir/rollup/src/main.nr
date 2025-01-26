@@ -6,8 +6,6 @@ use protocol_types::{
     merkle_tree,
 };
 
-mod from_aztec;
-
 fn main(
     // note hashes
     new_note_hashes: pub [Field; common::MAX_NOTES_PER_ROLLUP],
@@ -71,7 +69,7 @@ fn compute_new_nullifier_tree_snapshot(
     nullifier_low_leaf_preimages: [NullifierLeafPreimage; common::MAX_NOTES_PER_ROLLUP],
     nullifier_low_leaf_membership_witnesses: [merkle_tree::MembershipWitness<common::NULLIFIER_TREE_HEIGHT>; common::MAX_NOTES_PER_ROLLUP],
 ) -> AppendOnlyTreeSnapshot {
-    from_aztec::nullifier_tree_batch_insert(
+    rollup_lib::base::components::nullifier_tree::nullifier_tree_batch_insert(
         tree,
         new_nullifiers,
         sorted_nullifiers,
