@@ -25,9 +25,13 @@ export const NULLIFIER_SUBTREE_HEIGHT = 6;
 export const MAX_NULLIFIERS_PER_ROLLUP = 64;
 
 // Note: keep in sync with other languages
-const GENERATOR_INDEX__WA_ADDRESS = 1;
+export const GENERATOR_INDEX__WA_ADDRESS = 1;
 // Note: keep in sync with other languages
-const GENERATOR_INDEX__NOTE_NULLIFIER = 2;
+export const GENERATOR_INDEX__NOTE_NULLIFIER = 2;
+// Note: keep in sync with other languages
+export const GENERATOR_INDEX__NOTE_HASH_SILO = 3;
+// Note: keep in sync with other languages
+export const GENERATOR_INDEX__NULLIFIER_SILO = 4;
 
 // Note: keep in sync with other languages
 export const MAX_TOKENS_IN_PER_EXECUTION = 4;

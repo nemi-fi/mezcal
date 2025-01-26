@@ -4,9 +4,11 @@ use protocol_types::hash::poseidon2_hash_with_separator;
 mod note;
 mod owned_note;
 mod value_note;
+mod silo;
 
 pub use note::Note;
 pub use owned_note::{consume_owned_note, NoteConsumptionInputs, OwnedNote};
+pub use silo::{NoteHashToSilo, NullifierToSilo};
 pub use value_note::Erc20Note;
 
 // Note: keep in sync with other languages
@@ -38,6 +40,10 @@ pub global MAX_TOKENS_OUT_PER_EXECUTION: u32 = 4;
 pub global GENERATOR_INDEX__WA_ADDRESS: Field = 1;
 // Note: keep in sync with other languages
 pub global GENERATOR_INDEX__NOTE_NULLIFIER: Field = 2;
+// Note: keep in sync with other languages
+pub global GENERATOR_INDEX__NOTE_HASH_SILO: Field = 3;
+// Note: keep in sync with other languages
+pub global GENERATOR_INDEX__NULLIFIER_SILO: Field = 4;
 
 // Note: keep in sync with other languages
 pub global U256_LIMBS: u32 = 3;

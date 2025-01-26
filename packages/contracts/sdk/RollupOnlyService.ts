@@ -6,10 +6,13 @@ import { ethers } from "ethers";
 import type { AsyncOrSync } from "ts-essentials";
 import type { PoolGeneric } from "../typechain-types";
 import {
+  GENERATOR_INDEX__NOTE_HASH_SILO,
+  GENERATOR_INDEX__NULLIFIER_SILO,
   INCLUDE_UNCOMMITTED,
   MAX_NOTES_PER_ROLLUP,
   MAX_NULLIFIERS_PER_ROLLUP,
   NOTE_HASH_SUBTREE_HEIGHT,
+  poseidon2Hash,
   type NoirAndBackend,
 } from "./RollupService";
 import type { TreesService } from "./TreesService";
@@ -28,15 +31,21 @@ export class RollupService {
 
     const { noteHashTree, nullifierTree } = await this.trees.getTrees();
     const pending = await this.selectTxsToRollup();
-    const pendingNoteHashes = pending.noteHashes.map((h) => new Fr(BigInt(h)));
-    const pendingNullifiers = pending.nullifiers.map((h) => new Fr(BigInt(h)));
     const noteHashTreeInput = await getInsertTreeInput(
       noteHashTree,
-      pendingNoteHashes,
+      await Promise.all(
+        pending.noteHashes.map(async (x) =>
+          Fr.fromString(await x.siloedHash()),
+        ),
+      ),
     );
     const nullifierTreeInput = await getInsertTreeInput(
       nullifierTree._tree,
-      pendingNullifiers.map((n) => n.toBuffer()),
+      await Promise.all(
+        pending.nullifiers.map(async (n) =>
+          Fr.fromString(await n.siloedHash()).toBuffer(),
+        ),
+      ),
     );
     assert(
       nullifierTreeInput.batchInsertResult != null,
@@ -48,12 +57,16 @@ export class RollupService {
     );
 
     const input = {
-      new_note_hashes: pendingNoteHashes.map((x: Fr) => x.toString()),
+      new_note_hashes: await Promise.all(
+        pending.noteHashes.map((x) => x.toNoir()),
+      ),
       note_hash_subtree_sibling_path: noteHashTreeInput.subtreeSiblingPath,
       note_hash_tree: noteHashTreeInput.treeSnapshot,
       expected_new_note_hash_tree: noteHashTreeInput.newTreeSnapshot,
 
-      new_nullifiers: pendingNullifiers.map((x: Fr) => x.toString()),
+      new_nullifiers: await Promise.all(
+        pending.nullifiers.map((x) => x.toNoir()),
+      ),
       nullifier_subtree_sibling_path:
         nullifierTreeInput.batchInsertResult.newSubtreeSiblingPath
           .toTuple()
@@ -114,8 +127,8 @@ export class RollupService {
     ).filter(([, tx]) => !tx.rolledUp);
     let batch: {
       txIndices: number[];
-      noteHashes: string[];
-      nullifiers: string[];
+      noteHashes: NoteHashToSilo[];
+      nullifiers: NullifierToSilo[];
     } = {
       txIndices: [],
       noteHashes: [],
@@ -124,17 +137,30 @@ export class RollupService {
 
     for (const [i, tx] of txs) {
       if (
-        batch.noteHashes.length + tx.noteHashes.length > MAX_NOTES_PER_ROLLUP ||
-        batch.nullifiers.length + tx.nullifiers.length >
+        batch.noteHashes.length + tx.innerNoteHashes.length >
+          MAX_NOTES_PER_ROLLUP ||
+        batch.nullifiers.length + tx.innerNullifiers.length >
           MAX_NULLIFIERS_PER_ROLLUP
       ) {
         break;
       }
-      // this is O(N^2), refactor
+      // TODO: this is O(N^2), refactor
       batch = {
         txIndices: [...batch.txIndices, i],
-        noteHashes: [...batch.noteHashes, ...tx.noteHashes],
-        nullifiers: [...batch.nullifiers, ...tx.nullifiers],
+        noteHashes: [
+          ...batch.noteHashes,
+          ...tx.innerNoteHashes.map(
+            (innerNoteHash) =>
+              new NoteHashToSilo(tx.siloContractAddress, innerNoteHash),
+          ),
+        ],
+        nullifiers: [
+          ...batch.nullifiers,
+          ...tx.innerNullifiers.map(
+            (innerNullifier) =>
+              new NullifierToSilo(tx.siloContractAddress, innerNullifier),
+          ),
+        ],
       };
     }
     return {
@@ -142,12 +168,12 @@ export class RollupService {
       noteHashes: utils.arrayPadEnd(
         batch.noteHashes,
         MAX_NOTES_PER_ROLLUP,
-        ethers.ZeroHash,
+        new NoteHashToSilo(ethers.ZeroAddress, ethers.ZeroHash),
       ),
       nullifiers: utils.arrayPadEnd(
         batch.nullifiers,
         MAX_NULLIFIERS_PER_ROLLUP,
-        ethers.ZeroHash,
+        new NullifierToSilo(ethers.ZeroAddress, ethers.ZeroHash),
       ),
     };
   }
@@ -202,4 +228,60 @@ async function treeToSnapshot(tree: AppendOnlyTree<Fr>) {
       .getNumLeaves(INCLUDE_UNCOMMITTED)
       .toString(),
   };
+}
+
+export class NoteHashToSilo {
+  constructor(
+    readonly siloContractAddress: string,
+    readonly innerNoteHash: string,
+  ) {}
+
+  async siloedHash(): Promise<string> {
+    const { Fr } = await import("@aztec/aztec.js");
+    if (this.siloContractAddress === ethers.ZeroAddress) {
+      return Fr.zero().toString();
+    }
+    return (
+      await poseidon2Hash([
+        GENERATOR_INDEX__NOTE_HASH_SILO,
+        this.siloContractAddress,
+        this.innerNoteHash,
+      ])
+    ).toString();
+  }
+
+  async toNoir() {
+    return {
+      silo_contract_address: this.siloContractAddress,
+      inner_note_hash: this.innerNoteHash,
+    };
+  }
+}
+
+export class NullifierToSilo {
+  constructor(
+    readonly siloContractAddress: string,
+    readonly innerNullifier: string,
+  ) {}
+
+  async siloedHash(): Promise<string> {
+    const { Fr } = await import("@aztec/aztec.js");
+    if (this.siloContractAddress === ethers.ZeroAddress) {
+      return Fr.zero().toString();
+    }
+    return (
+      await poseidon2Hash([
+        GENERATOR_INDEX__NULLIFIER_SILO,
+        this.siloContractAddress,
+        this.innerNullifier,
+      ])
+    ).toString();
+  }
+
+  async toNoir() {
+    return {
+      silo_contract_address: this.siloContractAddress,
+      inner_nullifier: this.innerNullifier,
+    };
+  }
 }

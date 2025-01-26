@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {Fr, FrLib} from "./Fr.sol";
-import {NoteInput, PublicInputs, AppendOnlyTreeSnapshot} from "./Utils.sol";
+import {NoteInput, PublicInputs, AppendOnlyTreeSnapshot, NoteHashToSilo, NullifierToSilo} from "./Utils.sol";
 import {UltraVerifier as RollupVerifier} from "../noir/target/rollup.sol";
 
 // Note: keep in sync with other languages
@@ -19,8 +19,9 @@ uint256 constant NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP = 2;
 
 struct PendingTx {
     bool rolledUp;
-    Fr[] noteHashes;
-    Fr[] nullifiers;
+    address siloContractAddress;
+    Fr[] innerNoteHashes;
+    Fr[] innerNullifiers;
 }
 
 contract PoolGeneric {
@@ -33,10 +34,10 @@ contract PoolGeneric {
         RollupVerifier rollupVerifier;
         PendingTx[] allPendingTxs;
         AppendOnlyTreeSnapshot noteHashTree;
-        mapping(Fr => uint256) noteHashState; // TODO(perf): nuke this
+        mapping(address => mapping(Fr => uint256)) noteHashState; // TODO(perf): nuke this
         uint256 noteHashBatchIndex;
         AppendOnlyTreeSnapshot nullifierTree;
-        mapping(Fr => uint256) nullifierState; // TODO(perf): nuke this
+        mapping(address => mapping(Fr => uint256)) nullifierState; // TODO(perf): nuke this
         uint256 nullifierBatchIndex;
     }
 
@@ -46,16 +47,16 @@ contract PoolGeneric {
     // TODO(perf): use dynamic array to save on gas costs
     event NoteHashes(
         uint256 indexed index,
-        Fr[MAX_NOTES_PER_ROLLUP] noteHashes
+        NoteHashToSilo[MAX_NOTES_PER_ROLLUP] noteHashes
     );
-    error NoteHashExists(Fr noteHash);
+    error NoteHashExists(NoteHashToSilo noteHash);
 
     // TODO(perf): use dynamic array to save on gas costs
     event Nullifiers(
         uint256 indexed index,
-        Fr[MAX_NULLIFIERS_PER_ROLLUP] nullifiers
+        NullifierToSilo[MAX_NULLIFIERS_PER_ROLLUP] nullifiers
     );
-    error NullifierExists(Fr nullifier);
+    error NullifierExists(NullifierToSilo nullifier);
 
     constructor(RollupVerifier rollupVerifier_) {
         _poolGenericStorage().rollupVerifier = rollupVerifier_;
@@ -77,23 +78,25 @@ contract PoolGeneric {
         AppendOnlyTreeSnapshot calldata newNoteHashTree,
         AppendOnlyTreeSnapshot calldata newNullifierTree
     ) external {
-        Fr[MAX_NOTES_PER_ROLLUP] memory pendingNoteHashes;
-        Fr[MAX_NULLIFIERS_PER_ROLLUP] memory pendingNullifiers;
+        NoteHashToSilo[MAX_NOTES_PER_ROLLUP] memory pendingNoteHashes;
+        NullifierToSilo[MAX_NULLIFIERS_PER_ROLLUP] memory pendingNullifiers;
         {
             uint256 noteHashesIdx = 0;
             uint256 nullifiersIdx = 0;
             for (uint256 i = 0; i < txIndices.length; i++) {
                 PendingTx memory pendingTx = _poolGenericStorage()
                     .allPendingTxs[txIndices[i]];
-                for (uint256 j = 0; j < pendingTx.noteHashes.length; j++) {
-                    pendingNoteHashes[noteHashesIdx++] = pendingTx.noteHashes[
-                        j
-                    ];
+                for (uint256 j = 0; j < pendingTx.innerNoteHashes.length; j++) {
+                    pendingNoteHashes[noteHashesIdx++] = NoteHashToSilo({
+                        siloContractAddress: pendingTx.siloContractAddress,
+                        innerNoteHash: pendingTx.innerNoteHashes[j]
+                    });
                 }
-                for (uint256 j = 0; j < pendingTx.nullifiers.length; j++) {
-                    pendingNullifiers[nullifiersIdx++] = pendingTx.nullifiers[
-                        j
-                    ];
+                for (uint256 j = 0; j < pendingTx.innerNullifiers.length; j++) {
+                    pendingNullifiers[nullifiersIdx++] = NullifierToSilo({
+                        siloContractAddress: pendingTx.siloContractAddress,
+                        innerNullifier: pendingTx.innerNullifiers[j]
+                    });
                 }
             }
         }
@@ -103,7 +106,7 @@ contract PoolGeneric {
         );
         // note hashes
         for (uint256 i = 0; i < pendingNoteHashes.length; i++) {
-            pi.push(pendingNoteHashes[i].toBytes32());
+            pi.push(pendingNoteHashes[i]);
         }
         pi.push(_poolGenericStorage().noteHashTree.root);
         pi.push(
@@ -114,7 +117,7 @@ contract PoolGeneric {
 
         // nullifiers
         for (uint256 i = 0; i < pendingNullifiers.length; i++) {
-            pi.push(pendingNullifiers[i].toBytes32());
+            pi.push(pendingNullifiers[i]);
         }
         pi.push(_poolGenericStorage().nullifierTree.root);
         pi.push(
@@ -151,13 +154,17 @@ contract PoolGeneric {
         // TODO(perf): remove this disgusting gas waste
         for (uint256 i = 0; i < pendingNoteHashes.length; i++) {
             _poolGenericStorage().noteHashState[
-                    pendingNoteHashes[i]
+                pendingNoteHashes[i].siloContractAddress
+            ][
+                    pendingNoteHashes[i].innerNoteHash
                 ] = NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP;
         }
         // TODO(perf): remove this disgusting gas waste
         for (uint256 i = 0; i < pendingNullifiers.length; i++) {
             _poolGenericStorage().nullifierState[
-                    pendingNullifiers[i]
+                pendingNullifiers[i].siloContractAddress
+            ][
+                    pendingNullifiers[i].innerNullifier
                 ] = NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP;
         }
     }
@@ -176,33 +183,47 @@ contract PoolGeneric {
         PendingTx storage pendingTx = _poolGenericStorage().allPendingTxs[
             _poolGenericStorage().allPendingTxs.length - 1
         ];
+        address siloContractAddress = msg.sender;
+        pendingTx.siloContractAddress = siloContractAddress;
 
         for (uint256 i = 0; i < noteInputs.length; i++) {
-            Fr noteHash = FrLib.tryFrom(noteInputs[i].noteHash);
+            Fr innerNoteHash = FrLib.tryFrom(noteInputs[i].innerNoteHash);
             require(
-                _poolGenericStorage().noteHashState[noteHash] ==
-                    NOTE_HASH_OR_NULLIFIER_STATE_NOT_EXISTS,
-                NoteHashExists(noteHash)
+                _poolGenericStorage().noteHashState[siloContractAddress][
+                    innerNoteHash
+                ] == NOTE_HASH_OR_NULLIFIER_STATE_NOT_EXISTS,
+                NoteHashExists(
+                    NoteHashToSilo({
+                        siloContractAddress: siloContractAddress,
+                        innerNoteHash: innerNoteHash
+                    })
+                )
             );
-            _poolGenericStorage().noteHashState[
-                    noteHash
+            _poolGenericStorage().noteHashState[siloContractAddress][
+                    innerNoteHash
                 ] = NOTE_HASH_OR_NULLIFIER_STATE_PENDING;
             // TODO(perf): this is a waste of gas
-            pendingTx.noteHashes.push(noteHash);
+            pendingTx.innerNoteHashes.push(innerNoteHash);
         }
 
         for (uint256 i = 0; i < nullifiers.length; i++) {
-            Fr nullifier = FrLib.tryFrom(nullifiers[i]);
+            Fr innerNullifier = FrLib.tryFrom(nullifiers[i]);
             require(
-                _poolGenericStorage().nullifierState[nullifier] ==
-                    NOTE_HASH_OR_NULLIFIER_STATE_NOT_EXISTS,
-                NullifierExists(nullifier)
+                _poolGenericStorage().nullifierState[siloContractAddress][
+                    innerNullifier
+                ] == NOTE_HASH_OR_NULLIFIER_STATE_NOT_EXISTS,
+                NullifierExists(
+                    NullifierToSilo({
+                        siloContractAddress: siloContractAddress,
+                        innerNullifier: innerNullifier
+                    })
+                )
             );
-            _poolGenericStorage().nullifierState[
-                    nullifier
+            _poolGenericStorage().nullifierState[siloContractAddress][
+                    innerNullifier
                 ] = NOTE_HASH_OR_NULLIFIER_STATE_PENDING;
             // TODO(perf): this is a waste of gas
-            pendingTx.nullifiers.push(nullifier);
+            pendingTx.innerNullifiers.push(innerNullifier);
         }
 
         emit EncryptedNotes(noteInputs);
@@ -228,12 +249,24 @@ contract PoolGeneric {
         return _poolGenericStorage().nullifierTree;
     }
 
-    function noteHashState(bytes32 noteHash) external view returns (uint256) {
-        return _poolGenericStorage().noteHashState[FrLib.tryFrom(noteHash)];
+    function noteHashState(
+        address siloContractAddress,
+        bytes32 innerNoteHash
+    ) external view returns (uint256) {
+        return
+            _poolGenericStorage().noteHashState[siloContractAddress][
+                FrLib.tryFrom(innerNoteHash)
+            ];
     }
 
-    function nullifierState(bytes32 nullifier) external view returns (uint256) {
-        return _poolGenericStorage().nullifierState[FrLib.tryFrom(nullifier)];
+    function nullifierState(
+        address siloContractAddress,
+        bytes32 innerNullifier
+    ) external view returns (uint256) {
+        return
+            _poolGenericStorage().nullifierState[siloContractAddress][
+                FrLib.tryFrom(innerNullifier)
+            ];
     }
 
     function _poolGenericStorage()

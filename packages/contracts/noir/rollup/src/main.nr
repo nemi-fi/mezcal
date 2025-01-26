@@ -8,12 +8,12 @@ use protocol_types::{
 
 fn main(
     // note hashes
-    new_note_hashes: pub [Field; common::MAX_NOTES_PER_ROLLUP],
+    new_note_hashes: pub [common::NoteHashToSilo; common::MAX_NOTES_PER_ROLLUP],
     note_hash_subtree_sibling_path: [Field; common::NOTE_HASH_SUBTREE_SIBLING_PATH_LENGTH],
     note_hash_tree: pub AppendOnlyTreeSnapshot,
     expected_new_note_hash_tree: pub AppendOnlyTreeSnapshot,
     // nullifiers
-    new_nullifiers: pub [Field; common::MAX_NULLIFIERS_PER_ROLLUP],
+    new_nullifiers: pub [common::NullifierToSilo; common::MAX_NULLIFIERS_PER_ROLLUP],
     sorted_nullifiers: [Field; common::MAX_NULLIFIERS_PER_ROLLUP],
     sorted_nullifiers_indexes: [u32; common::MAX_NULLIFIERS_PER_ROLLUP],
     nullifier_subtree_sibling_path: [Field; common::NULLIFIER_SUBTREE_SIBLING_PATH_LENGTH],
@@ -24,14 +24,14 @@ fn main(
 ) {
     let new_note_hash_tree = compute_new_note_hash_tree_snapshot::<common::MAX_NOTES_PER_ROLLUP, common::NOTE_HASH_SUBTREE_HEIGHT, common::NOTE_HASH_SUBTREE_SIBLING_PATH_LENGTH>(
         note_hash_tree,
-        new_note_hashes,
+        new_note_hashes.map(|x: common::NoteHashToSilo| x.siloed()),
         note_hash_subtree_sibling_path,
     );
     assert(new_note_hash_tree == expected_new_note_hash_tree, "Invalid new note hash tree");
 
     let new_nullifier_tree = compute_new_nullifier_tree_snapshot(
         nullifier_tree,
-        new_nullifiers,
+        new_nullifiers.map(|x: common::NullifierToSilo| x.siloed()),
         sorted_nullifiers,
         sorted_nullifiers_indexes,
         nullifier_subtree_sibling_path,

@@ -29,9 +29,19 @@ function castAddressToBytes32(address x) pure returns (bytes32) {
 }
 
 struct NoteInput {
-    bytes32 noteHash;
+    bytes32 innerNoteHash;
     // TODO(security): constrain note encryption in Noir
     bytes encryptedNote;
+}
+
+struct NoteHashToSilo {
+    address siloContractAddress;
+    Fr innerNoteHash;
+}
+
+struct NullifierToSilo {
+    address siloContractAddress;
+    Fr innerNullifier;
 }
 
 struct Call {
@@ -81,6 +91,22 @@ library PublicInputs {
 
     function push(Type memory publicInputs, Fr value) internal pure {
         push(publicInputs, value.toBytes32());
+    }
+
+    function push(
+        Type memory publicInputs,
+        NoteHashToSilo memory value
+    ) internal pure {
+        push(publicInputs, value.siloContractAddress);
+        push(publicInputs, value.innerNoteHash);
+    }
+
+    function push(
+        Type memory publicInputs,
+        NullifierToSilo memory value
+    ) internal pure {
+        push(publicInputs, value.siloContractAddress);
+        push(publicInputs, value.innerNullifier);
     }
 
     function pushUint256Limbs(
