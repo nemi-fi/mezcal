@@ -30,6 +30,7 @@ function castAddressToBytes32(address x) pure returns (bytes32) {
 
 struct NoteInput {
     bytes32 noteHash;
+    // TODO(security): constrain note encryption in Noir
     bytes encryptedNote;
 }
 
