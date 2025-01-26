@@ -137,7 +137,7 @@ export class PoolErc20Service {
     const unshieldCircuit = (await this.circuits).unshield;
     console.time("unshield generateProof");
     const { witness } = await unshieldCircuit.noir.execute({
-      context: await this.trees.getTreeRoots(),
+      context: await this.trees.getContext(),
       from_secret_key: secretKey,
       from_note_inputs: await this.toNoteConsumptionInputs(secretKey, fromNote),
       to,
@@ -176,7 +176,7 @@ export class PoolErc20Service {
     const joinCircuit = (await this.circuits).join;
     console.time("join generateProof");
     const { witness } = await joinCircuit.noir.execute({
-      tree_roots: await this.trees.getTreeRoots(),
+      context: await this.trees.getContext(),
       from_secret_key: secretKey,
       join_randomness,
       notes: await Promise.all(
@@ -226,7 +226,7 @@ export class PoolErc20Service {
     const to_randomness = Fr.random().toString();
     const change_randomness = Fr.random().toString();
     const input = {
-      tree_roots: await this.trees.getTreeRoots(),
+      context: await this.trees.getContext(),
       from_note_inputs: await this.toNoteConsumptionInputs(secretKey, fromNote),
       from_secret_key: secretKey,
       to: to.address,
@@ -468,7 +468,7 @@ export class PoolErc20Service {
     );
 
     const input = {
-      tree_roots: await this.trees.getTreeRoots(),
+      context: await this.trees.getContext(),
       // accounts
       from_secret_key: fromSecretKey,
       to_address: to.address,

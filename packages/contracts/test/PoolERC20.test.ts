@@ -73,7 +73,7 @@ describe("PoolERC20", () => {
       rollup: noir.getCircuitJson("rollup"),
     });
 
-    console.log("roots", await trees.getTreeRoots());
+    console.log("roots", await trees.getContext());
   });
 
   it("shields", async () => {

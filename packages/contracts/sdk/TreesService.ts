@@ -18,8 +18,7 @@ import {
 export class TreesService {
   constructor(private contract: PoolGeneric) {}
 
-  // TODO: rename to `getContext`
-  getTreeRoots = z
+  getContext = z
     .function()
     .args()
     .implement(async () => {

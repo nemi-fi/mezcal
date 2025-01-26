@@ -3,7 +3,7 @@ import type { ElementOf } from "ts-essentials";
 import type { TreesService } from "./TreesService";
 
 export const REMOTE_TREES_ALLOWED_METHODS = [
-  "getTreeRoots",
+  "getContext",
   "getNoteConsumptionInputs",
 ] as const;
 export type ITreesService = Pick<
