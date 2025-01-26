@@ -63,12 +63,12 @@ contract PoolGeneric {
         _poolGenericStorage()
             .noteHashTree
             .root = 0x1fd848aa69e1633722fe249a5b7f53b094f1c9cef9f5c694b073fd1cc5850dfb; // empty tree
-        _poolGenericStorage()
-            .nullifierTree
-            .root = 0x0aa63c509390ad66ecd821998aabb16a818bcc5db5cf4accc0ce1821745244e9; // nullifier tree filled with 1 canonical subtree of nullifiers
-        _poolGenericStorage()
-            .nullifierTree
-            .nextAvailableLeafIndex = MAX_NULLIFIERS_PER_ROLLUP;
+
+        // nullifier tree filled with 1 canonical subtree of nullifiers
+        _poolGenericStorage().nullifierTree = AppendOnlyTreeSnapshot({
+            root: 0x0aa63c509390ad66ecd821998aabb16a818bcc5db5cf4accc0ce1821745244e9,
+            nextAvailableLeafIndex: MAX_NULLIFIERS_PER_ROLLUP
+        });
     }
 
     function rollup(
