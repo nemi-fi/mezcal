@@ -22,7 +22,7 @@ fn main(
     nullifier_tree: pub AppendOnlyTreeSnapshot,
     expected_new_nullifier_tree: pub AppendOnlyTreeSnapshot,
 ) {
-    let new_note_hash_tree = compute_new_tree_snapshot::<common::MAX_NOTES_PER_ROLLUP, common::NOTE_HASH_SUBTREE_HEIGHT, common::NOTE_HASH_SUBTREE_SIBLING_PATH_LENGTH>(
+    let new_note_hash_tree = compute_new_note_hash_tree_snapshot::<common::MAX_NOTES_PER_ROLLUP, common::NOTE_HASH_SUBTREE_HEIGHT, common::NOTE_HASH_SUBTREE_SIBLING_PATH_LENGTH>(
         note_hash_tree,
         new_note_hashes,
         note_hash_subtree_sibling_path,
@@ -41,7 +41,7 @@ fn main(
     assert(new_nullifier_tree == expected_new_nullifier_tree, "Invalid new nullifier tree");
 }
 
-fn compute_new_tree_snapshot<let LEAVES_LENGTH: u32, let SUBTREE_HEIGHT: u32, let SUBTREE_SIBLING_PATH_LENGTH: u32>(
+fn compute_new_note_hash_tree_snapshot<let LEAVES_LENGTH: u32, let SUBTREE_HEIGHT: u32, let SUBTREE_SIBLING_PATH_LENGTH: u32>(
     tree: AppendOnlyTreeSnapshot,
     new_leaves: [Field; LEAVES_LENGTH],
     subtree_sibling_path: [Field; SUBTREE_SIBLING_PATH_LENGTH],
@@ -69,7 +69,7 @@ fn compute_new_nullifier_tree_snapshot(
     nullifier_low_leaf_preimages: [NullifierLeafPreimage; common::MAX_NOTES_PER_ROLLUP],
     nullifier_low_leaf_membership_witnesses: [merkle_tree::MembershipWitness<common::NULLIFIER_TREE_HEIGHT>; common::MAX_NOTES_PER_ROLLUP],
 ) -> AppendOnlyTreeSnapshot {
-    rollup_lib::base::components::nullifier_tree::nullifier_tree_batch_insert(
+    merkle_tree::indexed_tree::batch_insert::<_, _, _, _, common::NULLIFIER_SUBTREE_HEIGHT, common::NULLIFIER_TREE_HEIGHT>(
         tree,
         new_nullifiers,
         sorted_nullifiers,

@@ -6,5 +6,4 @@ compiler_version = ">=0.39.0"
 
 [dependencies]
 protocol_types = { git = "https://github.com/AztecProtocol/aztec-packages/", tag = "aztec-packages-v0.66.0", directory = "noir-projects/noir-protocol-circuits/crates/types" }
-rollup_lib = { git = "https://github.com/AztecProtocol/aztec-packages/", tag = "aztec-packages-v0.66.0", directory = "noir-projects/noir-protocol-circuits/crates/rollup-lib" }
 common = { path = "../common" }
