@@ -7,14 +7,13 @@ struct Result {
 }
 
 fn main(
-    tree_roots: pub common::TreeRoots,
+    context: pub common::Context,
     // params
     from_secret_key: Field,
     notes: [common::NoteConsumptionInputs; MAX_NOTES_TO_JOIN],
     join_randomness: Field,
 ) -> pub Result {
-    let nullifiers =
-        notes.map(|note| common::consume_owned_note(tree_roots, from_secret_key, note));
+    let nullifiers = notes.map(|note| common::consume_owned_note(context, from_secret_key, note));
 
     let token = notes[0].note.amount.token;
     let mut joined_amount = common::TokenAmount { token, amount: common::U256::new() };
@@ -28,7 +27,7 @@ fn main(
         amount: joined_amount,
         randomness: join_randomness,
     }
-        .hash();
+        .inner_hash();
 
     Result { nullifiers, join_note_hash }
 }

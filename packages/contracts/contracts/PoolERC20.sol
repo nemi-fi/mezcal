@@ -115,8 +115,9 @@ contract PoolERC20 is PoolGeneric {
         NoteInput calldata joinNote
     ) external {
         PublicInputs.Type memory pi = PublicInputs.create(
-            2 + MAX_NOTES_TO_JOIN + 1
+            1 + 2 + MAX_NOTES_TO_JOIN + 1
         );
+        pi.push(address(this));
         pi.push(getNoteHashTree().root);
         pi.push(getNullifierTree().root);
         for (uint256 i = 0; i < MAX_NOTES_TO_JOIN; i++) {
@@ -145,7 +146,8 @@ contract PoolERC20 is PoolGeneric {
         NoteInput calldata changeNote,
         NoteInput calldata toNote
     ) external {
-        PublicInputs.Type memory pi = PublicInputs.create(5);
+        PublicInputs.Type memory pi = PublicInputs.create(1 + 5);
+        pi.push(address(this));
         pi.push(getNoteHashTree().root);
         pi.push(getNullifierTree().root);
         pi.push(nullifier);
@@ -178,8 +180,9 @@ contract PoolERC20 is PoolGeneric {
         Fr executionHash = keccak256ToFr(abi.encode(execution));
 
         PublicInputs.Type memory pi = PublicInputs.create(
-            // tree roots
-            2 +
+            1 +
+                // tree roots
+                2 +
                 // execution hashes
                 2 +
                 // amounts in & out
@@ -193,6 +196,7 @@ contract PoolERC20 is PoolGeneric {
                 // nullifiers out
                 MAX_TOKENS_OUT_PER_EXECUTION
         );
+        pi.push(address(this));
         // trees
         pi.push(getNoteHashTree().root);
         pi.push(getNullifierTree().root);
