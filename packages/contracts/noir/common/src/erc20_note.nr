@@ -7,7 +7,7 @@ pub struct Erc20Note {
 }
 
 impl Erc20Note {
-    pub fn consume_and_sub<let N: u32>(
+    pub fn sub_and_emit_change<let N: u32>(
         context: &mut crate::Context,
         notes: [Erc20NoteConsumptionInputs; N],
         amount: crate::TokenAmount,

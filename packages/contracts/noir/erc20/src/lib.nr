@@ -17,7 +17,7 @@ pub mod Token {
         amount: common::TokenAmount,
         change_randomness: Field,
     ) {
-        common::Erc20Note::consume_and_sub(
+        common::Erc20Note::sub_and_emit_change(
             context,
             [from_note_inputs],
             amount,
@@ -56,7 +56,7 @@ pub mod Token {
         to_randomness: Field,
         change_randomness: Field,
     ) {
-        common::Erc20Note::consume_and_sub(
+        common::Erc20Note::sub_and_emit_change(
             context,
             [from_note_inputs],
             common::TokenAmount { token: from_note_inputs.note.amount.token, amount },
