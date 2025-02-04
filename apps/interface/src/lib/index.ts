@@ -42,7 +42,6 @@ const interfaceSdk = sdk.createInterfaceSdk(coreSdk, trees, {
   unshield: import("@repo/contracts/noir/target/unshield.json"),
   join: import("@repo/contracts/noir/target/join.json"),
   transfer: import("@repo/contracts/noir/target/transfer.json"),
-  execute: import("@repo/contracts/noir/target/execute.json"),
 });
 const reown = new ReownService(contract);
 const evm = new EvmAccountService();

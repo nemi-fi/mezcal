@@ -5,10 +5,8 @@ import type { sdk as interfaceSdk } from "../sdk";
 import type { createBackendSdk } from "../sdk/backendSdk";
 import { parseUnits, snapshottedBeforeEach } from "../shared/utils";
 import {
-  IERC20__factory,
   MockERC20,
   MockERC20__factory,
-  MockSwap__factory,
   PoolERC20,
   PoolERC20__factory,
 } from "../typechain-types";
@@ -66,7 +64,6 @@ describe("PoolERC20", () => {
       unshield: noir.getCircuitJson("erc20_unshield"),
       join: noir.getCircuitJson("erc20_join"),
       transfer: noir.getCircuitJson("erc20_transfer"),
-      execute: noir.getCircuitJson("erc20_execute"),
     });
 
     backendSdk = createBackendSdk(coreSdk, trees, {
@@ -284,78 +281,6 @@ describe("PoolERC20", () => {
       30n - 10n,
     );
     expect(await sdk.poolErc20.balanceOf(usdc, charlieSecretKey)).to.equal(10n);
-  });
-
-  it("executes", async () => {
-    const mockSwap = await new MockSwap__factory(alice).deploy();
-    await usdc.mintForTests(mockSwap, 9999999999);
-    await btc.mintForTests(mockSwap, 9999999999);
-
-    const initialBalance = 120n;
-    const amountIn = 50n;
-    const amountOut = 100n;
-
-    await sdk.poolErc20.shield({
-      account: alice,
-      token: usdc,
-      amount: initialBalance,
-      secretKey: aliceSecretKey,
-    });
-    await backendSdk.rollup.rollup();
-    const [shieldedNote] = await sdk.poolErc20.getBalanceNotesOf(
-      usdc,
-      aliceSecretKey,
-    );
-
-    const tokenIn = await btc.getAddress();
-    const tokenOut = await usdc.getAddress();
-
-    const calls = [
-      {
-        to: tokenOut,
-        data: IERC20__factory.createInterface().encodeFunctionData("approve", [
-          await mockSwap.getAddress(),
-          amountOut,
-        ]),
-      },
-      {
-        to: await mockSwap.getAddress(),
-        data: mockSwap.interface.encodeFunctionData("swap", [
-          tokenIn,
-          tokenOut,
-          amountIn,
-          amountOut,
-        ]),
-      },
-    ];
-
-    const to = await CompleteWaAddress.fromSecretKey(bobSecretKey);
-    await sdk.poolErc20.execute({
-      fromSecretKey: aliceSecretKey,
-      fromNotes: [shieldedNote],
-      to,
-      amountsIn: [
-        {
-          token: tokenIn,
-          amount: amountIn.toString(),
-        },
-      ],
-      amountsOut: [
-        {
-          token: tokenOut,
-          amount: amountOut.toString(),
-        },
-      ],
-      calls,
-    });
-    await backendSdk.rollup.rollup();
-
-    expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.eq(
-      initialBalance - amountOut,
-    );
-    expect(await sdk.poolErc20.balanceOf(btc, bobSecretKey)).to.eq(amountIn);
-    expect(await usdc.balanceOf(pool)).to.eq(initialBalance - amountOut);
-    expect(await btc.balanceOf(pool)).to.eq(amountIn);
   });
 
   it("can't double spend a note", async () => {

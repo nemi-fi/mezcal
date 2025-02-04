@@ -4,7 +4,6 @@ members = [
   "erc20_unshield",
   "erc20_join",
   "erc20_transfer",
-  "erc20_execute",
   "rollup",
   "common",
 ]

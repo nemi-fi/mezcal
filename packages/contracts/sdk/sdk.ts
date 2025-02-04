@@ -24,7 +24,7 @@ export function createInterfaceSdk(
   coreSdk: ReturnType<typeof createCoreSdk>,
   trees: ITreesService,
   compiledCircuits: Record<
-    "shield" | "unshield" | "join" | "transfer" | "execute",
+    "shield" | "unshield" | "join" | "transfer",
     AsyncOrSync<CompiledCircuit>
   >,
 ) {
