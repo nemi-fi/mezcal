@@ -24,7 +24,7 @@ pub global NULLIFIER_TREE_HEIGHT: u32 = 40;
 // Note: keep in sync with other languages
 pub global NULLIFIER_SUBTREE_HEIGHT: u32 = 6;
 // Note: keep in sync with other languages
-pub global MAX_NULLIFIERS_PER_ROLLUP: u32 = 64; // 2^NULLIFIER_TREE_HEIGHT
+pub global MAX_NULLIFIERS_PER_ROLLUP: u32 = 64; // 2^NULLIFIER_SUBTREE_HEIGHT
 // Note: keep in sync with other languages
 pub global NULLIFIER_SUBTREE_SIBLING_PATH_LENGTH: u32 =
     NULLIFIER_TREE_HEIGHT - NULLIFIER_SUBTREE_HEIGHT;
@@ -44,9 +44,11 @@ pub global U256_LIMBS: u32 = 3;
 
 pub type U256 = BigNum<U256_LIMBS, 257, U256Params>;
 
+// TODO(security): use a struct that checks the address
 pub type EthAddress = Field;
 
 /// Walmart Aztec address
+// TODO(security): use a struct that checks the address
 pub type WaAddress = Field;
 
 pub fn compute_wa_address(secret_key: Field) -> WaAddress {

@@ -4,6 +4,7 @@ import { utils } from "@repo/utils";
 import { ethers } from "ethers";
 import { assert } from "ts-essentials";
 
+// TODO(security): Constrain encryption and nuke this service.
 export class EncryptionService {
   #suite: CipherSuite;
 
