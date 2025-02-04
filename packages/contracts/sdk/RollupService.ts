@@ -3,7 +3,7 @@ import type { UltraPlonkBackend } from "@aztec/bb.js";
 import type { Noir } from "@noir-lang/noir_js";
 import { utils } from "@repo/utils";
 import { ethers } from "ethers";
-import { compact, isEqual, orderBy, times } from "lodash-es";
+import { compact, orderBy, times } from "lodash-es";
 import { assert, type AsyncOrSync } from "ts-essentials";
 import { PoolERC20__factory, type PoolERC20 } from "../typechain-types";
 import type { ExecutionStruct } from "../typechain-types/contracts/PoolERC20";
@@ -249,28 +249,7 @@ export class PoolErc20Service {
     // console.log("input\n", JSON.stringify(input));
     const transferCircuit = (await this.circuits).transfer;
     console.time("transfer generateProof");
-    const { witness, returnValue } = await transferCircuit.noir.execute(input);
-    {
-      const expectedReturnValue = {
-        nullifier: nullifier.toString(),
-        change_note_hash: await changeNote.hash(),
-        to_note_hash: await toNote.hash(),
-      };
-      const patchedReturnValue = {
-        ...(returnValue as any),
-        nullifier: new Fr(BigInt((returnValue as any).nullifier)).toString(),
-        change_note_hash: new Fr(
-          BigInt((returnValue as any).change_note_hash),
-        ).toString(),
-        to_note_hash: new Fr(
-          BigInt((returnValue as any).to_note_hash),
-        ).toString(),
-      };
-      assert(
-        isEqual(patchedReturnValue, expectedReturnValue),
-        `invalid transfer return value: ${JSON.stringify(patchedReturnValue)} != ${JSON.stringify(expectedReturnValue)}`,
-      );
-    }
+    const { witness } = await transferCircuit.noir.execute(input);
     const { proof } = await transferCircuit.backend.generateProof(witness);
     console.timeEnd("transfer generateProof");
 

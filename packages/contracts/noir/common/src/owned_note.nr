@@ -7,7 +7,7 @@ pub trait OwnedNote {
     fn owner(self) -> crate::WaAddress;
 }
 
-pub fn compute_nullifier_of_owned_note<T>(note: T, secret_key: Field) -> Field
+fn compute_nullifier_of_owned_note<T>(note: T, secret_key: Field) -> Field
 where
     T: OwnedNote + crate::Note,
 {
@@ -28,20 +28,20 @@ pub struct NoteConsumptionInputs {
 }
 
 impl NoteConsumptionInputs {
-    pub fn consume(self, tree_roots: crate::TreeRoots, secret_key: Field) -> Field {
+    pub fn consume(self, context: &mut crate::Context, secret_key: Field) {
         merkle_tree::assert_check_membership(
             self.note.hash(),
             self.note_index,
             self.note_sibling_path,
-            tree_roots.note_hash_root,
+            context.tree_roots.note_hash_root,
         );
         let nullifier = compute_nullifier_of_owned_note(self.note, secret_key);
         merkle_tree::assert_check_non_membership(
             nullifier,
             self.nullifier_low_leaf_preimage,
             self.nullifier_low_leaf_membership_witness,
-            tree_roots.nullifier_root,
+            context.tree_roots.nullifier_root,
         );
-        nullifier
+        context.push_nullifier(nullifier);
     }
 }
