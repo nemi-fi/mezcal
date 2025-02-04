@@ -1,16 +1,15 @@
-use crate::WaAddress;
 use protocol_types::{
     abis::nullifier_leaf_preimage::NullifierLeafPreimage, hash::poseidon2_hash_with_separator,
     merkle_tree,
 };
 
 pub trait OwnedNote {
-    fn owner(self) -> WaAddress;
+    fn owner(self) -> crate::WaAddress;
 }
 
-pub fn compute_nullifier_of_owned_note<T, let N: u32>(note: T, secret_key: Field) -> Field
+pub fn compute_nullifier_of_owned_note<T>(note: T, secret_key: Field) -> Field
 where
-    T: OwnedNote + crate::Note<N>,
+    T: OwnedNote + crate::Note,
 {
     assert_eq(note.owner(), crate::compute_wa_address(secret_key), "invalid secret key");
     poseidon2_hash_with_separator(

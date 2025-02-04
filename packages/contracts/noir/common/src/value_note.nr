@@ -27,11 +27,13 @@ impl Erc20Note {
     }
 }
 
-impl crate::Note<6> for Erc20Note {
+impl crate::Serialize<6> for Erc20Note {
     fn serialize(self) -> [Field; 6] {
         [self.owner, self.amount.token].concat(self.amount.amount.limbs).concat([self.randomness])
     }
+}
 
+impl crate::Note for Erc20Note {
     fn hash(self) -> Field {
         let serialized = self.serialize();
         // TODO(security): use poseidon2_hash_with_separator
