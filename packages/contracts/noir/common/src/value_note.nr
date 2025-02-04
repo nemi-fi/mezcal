@@ -17,7 +17,7 @@ impl Erc20Note {
         tree_roots: crate::TreeRoots,
         secret_key: Field,
     ) -> (Field, Self) {
-        let nullifier = crate::consume_owned_note(tree_roots, secret_key, note_consumption);
+        let nullifier = note_consumption.consume(tree_roots, secret_key);
         let change_note = Self {
             owner: note_consumption.note.owner,
             amount: note_consumption.note.amount - amount,

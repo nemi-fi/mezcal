@@ -6,7 +6,7 @@ mod owned_note;
 mod value_note;
 
 pub use note::{Note, Serialize};
-pub use owned_note::{consume_owned_note, NoteConsumptionInputs, OwnedNote};
+pub use owned_note::{NoteConsumptionInputs, OwnedNote};
 pub use value_note::Erc20Note;
 
 // Note: keep in sync with other languages

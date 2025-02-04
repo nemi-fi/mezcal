@@ -19,6 +19,7 @@ where
 }
 
 pub struct NoteConsumptionInputs {
+    // TODO: generalize for any Note/OwnedNote
     pub note: crate::Erc20Note,
     pub note_index: Field,
     pub note_sibling_path: [Field; crate::NOTE_HASH_TREE_HEIGHT],
@@ -26,24 +27,21 @@ pub struct NoteConsumptionInputs {
     pub nullifier_low_leaf_membership_witness: merkle_tree::MembershipWitness<crate::NOTE_HASH_TREE_HEIGHT>,
 }
 
-// TODO: generalize for any Note/OwnedNote
-pub fn consume_owned_note(
-    tree_roots: crate::TreeRoots,
-    secret_key: Field,
-    inputs: NoteConsumptionInputs,
-) -> Field {
-    merkle_tree::assert_check_membership(
-        inputs.note.hash(),
-        inputs.note_index,
-        inputs.note_sibling_path,
-        tree_roots.note_hash_root,
-    );
-    let nullifier = compute_nullifier_of_owned_note(inputs.note, secret_key);
-    merkle_tree::assert_check_non_membership(
-        nullifier,
-        inputs.nullifier_low_leaf_preimage,
-        inputs.nullifier_low_leaf_membership_witness,
-        tree_roots.nullifier_root,
-    );
-    nullifier
+impl NoteConsumptionInputs {
+    pub fn consume(self, tree_roots: crate::TreeRoots, secret_key: Field) -> Field {
+        merkle_tree::assert_check_membership(
+            self.note.hash(),
+            self.note_index,
+            self.note_sibling_path,
+            tree_roots.note_hash_root,
+        );
+        let nullifier = compute_nullifier_of_owned_note(self.note, secret_key);
+        merkle_tree::assert_check_non_membership(
+            nullifier,
+            self.nullifier_low_leaf_preimage,
+            self.nullifier_low_leaf_membership_witness,
+            tree_roots.nullifier_root,
+        );
+        nullifier
+    }
 }

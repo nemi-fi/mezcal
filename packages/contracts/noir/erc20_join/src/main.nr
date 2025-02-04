@@ -14,7 +14,7 @@ fn main(
     join_randomness: Field,
 ) -> pub Result {
     let nullifiers =
-        notes.map(|note| common::consume_owned_note(tree_roots, from_secret_key, note));
+        notes.map(|note: common::NoteConsumptionInputs| note.consume(tree_roots, from_secret_key));
 
     let token = notes[0].note.amount.token;
     let mut joined_amount = common::TokenAmount { token, amount: common::U256::new() };
