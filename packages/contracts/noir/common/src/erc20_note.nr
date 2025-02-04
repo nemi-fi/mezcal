@@ -12,18 +12,22 @@ impl Erc20Note {
         (self.owner != crate::WaAddress::zero()) & (self.amount.amount != crate::U256::new())
     }
 
-    pub fn consume_and_sub(
+    pub fn consume_and_sub<let N: u32>(
         context: &mut crate::Context,
-        note_consumption: Erc20NoteConsumptionInputs,
+        notes: [Erc20NoteConsumptionInputs; N],
         amount: crate::TokenAmount,
-        randomness: Field,
+        change_randomness: Field,
         secret_key: Field,
     ) {
-        note_consumption.consume(context, secret_key);
+        let mut subtracted = crate::TokenAmount::zero(amount.token);
+        for note in notes {
+            note.consume(context, secret_key);
+            subtracted += note.note.amount;
+        }
         Self {
-            owner: note_consumption.note.owner,
-            amount: note_consumption.note.amount - amount,
-            randomness,
+            owner: crate::WaAddress::from_secret_key(secret_key),
+            amount: subtracted - amount,
+            randomness: change_randomness,
         }
             .emit(context);
     }

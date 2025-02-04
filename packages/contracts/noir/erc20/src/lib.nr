@@ -19,7 +19,7 @@ pub mod Token {
     ) {
         common::Erc20Note::consume_and_sub(
             context,
-            from_note_inputs,
+            [from_note_inputs],
             amount,
             change_randomness,
             from_secret_key,
@@ -59,7 +59,7 @@ pub mod Token {
     ) {
         common::Erc20Note::consume_and_sub(
             context,
-            from_note_inputs,
+            [from_note_inputs],
             common::TokenAmount { token: from_note_inputs.note.amount.token, amount },
             change_randomness,
             from_secret_key,
