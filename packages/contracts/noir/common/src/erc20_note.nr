@@ -7,11 +7,6 @@ pub struct Erc20Note {
 }
 
 impl Erc20Note {
-    // TODO(security): remove this in favour of BoundedVec<Erc20Note, MAX_LEN>
-    pub fn is_set(self) -> bool {
-        (self.owner != crate::WaAddress::zero()) & (self.amount.amount != crate::U256::new())
-    }
-
     pub fn consume_and_sub<let N: u32>(
         context: &mut crate::Context,
         notes: [Erc20NoteConsumptionInputs; N],

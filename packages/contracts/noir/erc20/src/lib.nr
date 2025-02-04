@@ -39,7 +39,6 @@ pub mod Token {
 
         let mut joined_amount = common::TokenAmount::zero(notes[0].note.amount.token);
         for i in 0..N {
-            assert(notes[i].note.is_set(), "invalid note");
             joined_amount += notes[i].note.amount;
         }
 
