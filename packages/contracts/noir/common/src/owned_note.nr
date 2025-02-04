@@ -31,7 +31,6 @@ where
     T: OwnedNote,
 {
     pub fn consume(self, context: &mut crate::Context, secret_key: Field) {
-        // TODO(perf): optimize consume by using `note_hash_read_requests`
         merkle_tree::assert_check_membership(
             self.note.hash(),
             self.note_index,
@@ -39,6 +38,7 @@ where
             context.tree_roots().note_hash_root,
         );
         let nullifier = compute_nullifier_of_owned_note(self.note, secret_key);
+        // TODO(perf): optimize consume by checking nullifiers only during rollup
         merkle_tree::assert_check_non_membership(
             nullifier,
             self.nullifier_low_leaf_preimage,
