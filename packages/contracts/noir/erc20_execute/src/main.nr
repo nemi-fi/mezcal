@@ -1,9 +1,3 @@
-struct Result {
-    note_hashes_in: [Field; common::MAX_TOKENS_IN_PER_EXECUTION],
-    change_note_hashes: [Field; common::MAX_TOKENS_OUT_PER_EXECUTION],
-    nullifiers_out: [Field; common::MAX_TOKENS_OUT_PER_EXECUTION],
-}
-
 fn main(
     tree_roots: pub common::TreeRoots,
     // accounts
@@ -19,7 +13,9 @@ fn main(
     amounts_out: pub [common::TokenAmount; common::MAX_TOKENS_OUT_PER_EXECUTION],
     notes_out: [common::NoteConsumptionInputs; common::MAX_TOKENS_OUT_PER_EXECUTION],
     change_randomness: [Field; common::MAX_TOKENS_OUT_PER_EXECUTION],
-) -> pub Result {
+    ) -> pub common::Result<common::MAX_TOKENS_IN_PER_EXECUTION + common::MAX_TOKENS_OUT_PER_EXECUTION, common::MAX_TOKENS_OUT_PER_EXECUTION> {
+    let mut context = common::Context::from(tree_roots);
+
     let inputs = [execution_hash, execution_secret];
     assert_eq(
         std::hash::poseidon2::Poseidon2::hash(inputs, inputs.len()),
@@ -28,40 +24,27 @@ fn main(
     );
 
     // check amounts out and emit change note hashes & nullifiers
-    let (change_note_hashes, nullifiers_out) = {
-        let change_and_nullifiers_out = notes_out.enumerate().map(
-            |(i, note_input): (u32, common::NoteConsumptionInputs)| {
-                let amount_out = amounts_out[i];
-                if (note_input.note.is_set()) {
-                    let (nullifier, change_note) = common::Erc20Note::consume_and_sub(
-                        note_input,
-                        amount_out,
-                        change_randomness[i],
-                        tree_roots,
-                        from_secret_key,
-                    );
-                    (change_note.hash(), nullifier)
-                } else {
-                    assert_eq(amount_out.amount, common::U256::new(), f"invalid amount at {i}");
-                    (0, 0)
-                }
-            },
+    for x in notes_out.enumerate() {
+        let (i, note_input) = x;
+        common::Erc20Note::consume_and_sub_or_ignore_if_empty(
+            &mut context,
+            note_input,
+            amounts_out[i],
+            change_randomness[i],
+            from_secret_key,
         );
-        let change_note_hashes =
-            change_and_nullifiers_out.map(|(note_hash, _): (Field, Field)| note_hash);
-        let nullifiers_out =
-            change_and_nullifiers_out.map(|(_, nullifier): (Field, Field)| nullifier);
-        (change_note_hashes, nullifiers_out)
-    };
+    }
 
     // emit new note hashes
-    let note_hashes_in = amounts_in.enumerate().map(|(i, amount): (u32, common::TokenAmount)| {
-        if (amount.amount != common::U256::new()) {
+    for x in amounts_in.enumerate() {
+        let (i, amount) = x;
+        let note_hash = if amount.amount != common::U256::new() {
             common::Erc20Note { owner: to_address, amount, randomness: to_randomness[i] }.hash()
         } else {
             0
-        }
-    });
+        };
+        context.push_note_hash(note_hash)
+    }
 
-    Result { note_hashes_in, change_note_hashes, nullifiers_out }
+    context.finish()
 }

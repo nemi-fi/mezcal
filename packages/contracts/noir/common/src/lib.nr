@@ -56,6 +56,7 @@ pub fn compute_wa_address(secret_key: Field) -> WaAddress {
     poseidon2_hash_with_separator([secret_key], GENERATOR_INDEX__WA_ADDRESS)
 }
 
+#[derive(Eq)]
 pub struct TokenAmount {
     pub token: crate::EthAddress,
     pub amount: crate::U256,
