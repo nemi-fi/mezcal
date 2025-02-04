@@ -2,7 +2,7 @@ fn main(
     tree_roots: pub common::TreeRoots,
     // from
     from_secret_key: Field,
-    from_note_inputs: common::NoteConsumptionInputs,
+    from_note_inputs: erc20::Erc20NoteConsumptionInputs,
     // to params
     // TODO(security): check if specifying a different to in the EVM contract will bypass the proof
     to: pub common::EthAddress,

@@ -2,15 +2,15 @@ use bignum::{BigNum, fields::U256::U256Params};
 use protocol_types::hash::poseidon2_hash_with_separator;
 
 mod context;
+mod erc20_note;
 mod note;
 mod owned_note;
-mod value_note;
 
 pub use context::{Context, Result};
+pub use erc20_note::{Erc20Note, Erc20NoteConsumptionInputs};
 pub use note::Note;
 pub use owned_note::{NoteConsumptionInputs, OwnedNote};
 pub use protocol_types::{address::EthAddress, traits::Serialize};
-pub use value_note::Erc20Note;
 
 // Note: keep in sync with other languages
 pub global NOTE_HASH_TREE_HEIGHT: u32 = 40;

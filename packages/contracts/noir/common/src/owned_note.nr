@@ -3,13 +3,13 @@ use protocol_types::{
     merkle_tree,
 };
 
-pub trait OwnedNote {
+pub trait OwnedNote: crate::Note {
     fn owner(self) -> crate::WaAddress;
 }
 
 fn compute_nullifier_of_owned_note<T>(note: T, secret_key: Field) -> Field
 where
-    T: OwnedNote + crate::Note,
+    T: OwnedNote,
 {
     assert_eq(note.owner(), crate::WaAddress::from_secret_key(secret_key), "invalid secret key");
     poseidon2_hash_with_separator(
@@ -18,16 +18,18 @@ where
     )
 }
 
-pub struct NoteConsumptionInputs {
-    // TODO: generalize for any Note/OwnedNote
-    pub note: crate::Erc20Note,
+pub struct NoteConsumptionInputs<T> {
+    pub note: T,
     pub note_index: Field,
     pub note_sibling_path: [Field; crate::NOTE_HASH_TREE_HEIGHT],
     pub nullifier_low_leaf_preimage: NullifierLeafPreimage,
     pub nullifier_low_leaf_membership_witness: merkle_tree::MembershipWitness<crate::NOTE_HASH_TREE_HEIGHT>,
 }
 
-impl NoteConsumptionInputs {
+impl<T> NoteConsumptionInputs<T>
+where
+    T: OwnedNote,
+{
     pub fn consume(self, context: &mut crate::Context, secret_key: Field) {
         // TODO(perf): optimize consume by using `note_hash_read_requests`
         merkle_tree::assert_check_membership(

@@ -1,3 +1,5 @@
+pub use common::{Erc20Note, Erc20NoteConsumptionInputs};
+
 pub mod Token {
     pub fn mint(
         context: &mut common::Context,
@@ -11,7 +13,7 @@ pub mod Token {
     pub fn burn(
         context: &mut common::Context,
         from_secret_key: Field,
-        from_note_inputs: common::NoteConsumptionInputs,
+        from_note_inputs: common::Erc20NoteConsumptionInputs,
         amount: common::TokenAmount,
         change_randomness: Field,
     ) {
@@ -27,7 +29,7 @@ pub mod Token {
     pub fn join<let N: u32>(
         context: &mut common::Context,
         from_secret_key: Field,
-        notes: [common::NoteConsumptionInputs; N],
+        notes: [common::Erc20NoteConsumptionInputs; N],
         to: common::WaAddress,
         join_randomness: Field,
     ) {
@@ -49,7 +51,7 @@ pub mod Token {
     pub fn transfer(
         context: &mut common::Context,
         from_secret_key: Field,
-        from_note_inputs: common::NoteConsumptionInputs,
+        from_note_inputs: common::Erc20NoteConsumptionInputs,
         to: common::WaAddress,
         amount: common::U256,
         to_randomness: Field,

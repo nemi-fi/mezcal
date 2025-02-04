@@ -1,3 +1,5 @@
+// fails to compile if this file is moved to erc20 crate
+
 pub struct Erc20Note {
     pub owner: crate::WaAddress,
     pub amount: crate::TokenAmount,
@@ -12,18 +14,18 @@ impl Erc20Note {
 
     pub fn consume_and_sub(
         context: &mut crate::Context,
-        note_consumption: crate::NoteConsumptionInputs,
+        note_consumption: Erc20NoteConsumptionInputs,
         amount: crate::TokenAmount,
         randomness: Field,
         secret_key: Field,
     ) {
         note_consumption.consume(context, secret_key);
-        let change_note = Self {
+        Self {
             owner: note_consumption.note.owner,
             amount: note_consumption.note.amount - amount,
             randomness,
-        };
-        context.push_note_hash(change_note.hash());
+        }
+            .emit(context);
     }
 }
 
@@ -51,3 +53,5 @@ impl crate::OwnedNote for Erc20Note {
         self.owner
     }
 }
+
+pub type Erc20NoteConsumptionInputs = crate::NoteConsumptionInputs<Erc20Note>;
