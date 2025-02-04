@@ -19,6 +19,10 @@ impl Context {
         self.nullifiers = self.nullifiers.push_back(nullifier);
     }
 
+    pub fn tree_roots(self) -> crate::TreeRoots {
+        self.tree_roots
+    }
+
     pub fn finish<let NH_LEN: u32, let N_LEN: u32>(self) -> Result<NH_LEN, N_LEN> {
         Result {
             note_hashes: slice_to_exact_array(self.note_hashes),
