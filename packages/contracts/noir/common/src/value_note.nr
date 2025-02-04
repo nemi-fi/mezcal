@@ -25,26 +25,6 @@ impl Erc20Note {
         };
         context.push_note_hash(change_note.hash());
     }
-
-    pub fn consume_and_sub_or_ignore_if_empty(
-        context: &mut crate::Context,
-        note_consumption: crate::NoteConsumptionInputs,
-        amount: crate::TokenAmount,
-        randomness: Field,
-        secret_key: Field,
-    ) {
-        if note_consumption.note.is_set() {
-            Self::consume_and_sub(context, note_consumption, amount, randomness, secret_key);
-        } else {
-            assert_eq(
-                amount,
-                crate::TokenAmount { token: crate::EthAddress::zero(), amount: crate::U256::new() },
-                f"tried to consume an empty note using amount {amount}",
-            );
-            context.push_nullifier(0);
-            context.push_note_hash(0);
-        }
-    }
 }
 
 impl crate::Serialize<6> for Erc20Note {
