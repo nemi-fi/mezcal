@@ -11,7 +11,7 @@ fn compute_nullifier_of_owned_note<T>(note: T, secret_key: Field) -> Field
 where
     T: OwnedNote + crate::Note,
 {
-    assert_eq(note.owner(), crate::compute_wa_address(secret_key), "invalid secret key");
+    assert_eq(note.owner(), crate::WaAddress::from_secret_key(secret_key), "invalid secret key");
     poseidon2_hash_with_separator(
         [note.hash(), secret_key],
         crate::GENERATOR_INDEX__NOTE_NULLIFIER,

@@ -7,8 +7,9 @@ mod owned_note;
 mod value_note;
 
 pub use context::{Context, Result};
-pub use note::{Note, Serialize};
+pub use note::Note;
 pub use owned_note::{NoteConsumptionInputs, OwnedNote};
+pub use protocol_types::{address::EthAddress, traits::Serialize};
 pub use value_note::Erc20Note;
 
 // Note: keep in sync with other languages
@@ -46,16 +47,22 @@ pub global U256_LIMBS: u32 = 3;
 
 pub type U256 = BigNum<U256_LIMBS, 257, U256Params>;
 
-// TODO(security): use a struct that checks the address
-pub type EthAddress = Field;
-
 /// Walmart Aztec address
-// TODO(security): use a struct that checks the address
-pub type WaAddress = Field;
+#[derive(Eq, Serialize)]
+pub struct WaAddress {
+    inner: Field,
+}
 
-pub fn compute_wa_address(secret_key: Field) -> WaAddress {
-    // TODO(security): wtf is this? Use an actual private/public key cryptography
-    poseidon2_hash_with_separator([secret_key], GENERATOR_INDEX__WA_ADDRESS)
+impl WaAddress {
+    pub fn zero() -> Self {
+        Self { inner: 0 }
+    }
+
+    pub fn from_secret_key(secret_key: Field) -> Self {
+        // TODO(security): wtf is this? Use an actual private/public key cryptography
+        let inner = poseidon2_hash_with_separator([secret_key], GENERATOR_INDEX__WA_ADDRESS);
+        Self { inner }
+    }
 }
 
 #[derive(Eq)]

@@ -4,7 +4,7 @@ fn main(
     from_secret_key: Field,
     from_note_inputs: common::NoteConsumptionInputs,
     // transfer params
-    to: Field,
+    to: common::WaAddress,
     amount: common::U256,
     to_randomness: Field,
     // change

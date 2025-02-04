@@ -7,7 +7,7 @@ pub struct Erc20Note {
 impl Erc20Note {
     // TODO(security): remove this in favour of BoundedVec<Erc20Note, MAX_LEN>
     pub fn is_set(self) -> bool {
-        (self.owner != 0) & (self.amount.amount != crate::U256::new())
+        (self.owner != crate::WaAddress::zero()) & (self.amount.amount != crate::U256::new())
     }
 
     pub fn consume_and_sub(
@@ -38,7 +38,7 @@ impl Erc20Note {
         } else {
             assert_eq(
                 amount,
-                crate::TokenAmount { token: 0, amount: crate::U256::new() },
+                crate::TokenAmount { token: crate::EthAddress::zero(), amount: crate::U256::new() },
                 f"tried to consume an empty note using amount {amount}",
             );
             context.push_nullifier(0);
@@ -49,7 +49,12 @@ impl Erc20Note {
 
 impl crate::Serialize<6> for Erc20Note {
     fn serialize(self) -> [Field; 6] {
-        [self.owner, self.amount.token].concat(self.amount.amount.limbs).concat([self.randomness])
+        self
+            .owner
+            .serialize()
+            .concat(self.amount.token.serialize())
+            .concat(self.amount.amount.limbs)
+            .concat([self.randomness])
     }
 }
 

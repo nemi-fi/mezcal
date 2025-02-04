@@ -5,11 +5,10 @@ import { utils } from "@repo/utils";
 import { ethers } from "ethers";
 import { compact, orderBy, times } from "lodash-es";
 import { assert, type AsyncOrSync } from "ts-essentials";
-import { PoolERC20__factory, type PoolERC20 } from "../typechain-types";
-import type { ExecutionStruct } from "../typechain-types/contracts/PoolERC20";
+import { type PoolERC20 } from "../typechain-types";
 import { EncryptionService } from "./EncryptionService";
 import type { ITreesService } from "./RemoteTreesService";
-import { fromNoirU256, keccak256ToFr, toNoirU256, U256_LIMBS } from "./utils";
+import { fromNoirU256, toNoirU256, U256_LIMBS } from "./utils";
 
 // Note: keep in sync with other languages
 export const NOTE_HASH_TREE_HEIGHT = 40;
@@ -85,7 +84,7 @@ export class PoolErc20Service {
     const shieldCircuit = (await this.circuits).shield;
     const { witness } = await shieldCircuit.noir.execute({
       tree_roots: await this.trees.getTreeRoots(),
-      owner: note.owner.address,
+      owner: { inner: note.owner.address },
       amount: await note.amount.toNoir(),
       randomness: note.randomness,
       note_hash: noteInput.noteHash,
@@ -135,7 +134,7 @@ export class PoolErc20Service {
       tree_roots: await this.trees.getTreeRoots(),
       from_secret_key: secretKey,
       from_note_inputs: await this.toNoteConsumptionInputs(secretKey, fromNote),
-      to,
+      to: { inner: to },
       amount: await (
         await TokenAmount.from({
           amount,
@@ -224,7 +223,7 @@ export class PoolErc20Service {
       tree_roots: await this.trees.getTreeRoots(),
       from_note_inputs: await this.toNoteConsumptionInputs(secretKey, fromNote),
       from_secret_key: secretKey,
-      to: to.address,
+      to: { inner: to.address },
       amount: toNoirU256(amount),
       to_randomness,
       change_randomness,
@@ -372,7 +371,7 @@ export class Erc20Note {
 
   async toNoir() {
     return {
-      owner: this.owner.address,
+      owner: { inner: this.owner.address },
       amount: await this.amount.toNoir(),
       randomness: this.randomness,
     };
@@ -482,7 +481,7 @@ export class TokenAmount {
 
   async toNoir() {
     return {
-      token: this.token,
+      token: { inner: this.token },
       amount: toNoirU256(this.amount),
     };
   }
