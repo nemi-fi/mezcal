@@ -6,3 +6,4 @@ compiler_version = ">=0.39.0"
 
 [dependencies]
 common = { path = "../common" }
+erc20 = { path = "../erc20" }

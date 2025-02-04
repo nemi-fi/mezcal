@@ -1,9 +1,7 @@
 [package]
-name = "erc20_transfer"
-type = "bin"
+name = "erc20"
+type = "lib"
 authors = ["Oleh Misarosh <olehmisar@gmail.com>"]
-compiler_version = ">=0.39.0"
 
 [dependencies]
 common = { path = "../common" }
-erc20 = { path = "../erc20" }

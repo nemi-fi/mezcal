@@ -12,19 +12,15 @@ fn main(
 ) -> pub common::Result<2, 1> {
     let mut context = common::Context::from(tree_roots);
 
-    common::Erc20Note::consume_and_sub(
+    erc20::Token::transfer(
         &mut context,
-        from_note_inputs,
-        common::TokenAmount { token: from_note_inputs.note.amount.token, amount },
-        change_randomness,
         from_secret_key,
+        from_note_inputs,
+        to,
+        amount,
+        to_randomness,
+        change_randomness,
     );
-    let to_note = common::Erc20Note {
-        owner: to,
-        amount: common::TokenAmount { token: from_note_inputs.note.amount.token, amount },
-        randomness: to_randomness,
-    };
-    context.push_note_hash(to_note.hash());
 
     context.finish()
 }

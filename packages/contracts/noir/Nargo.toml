@@ -1,5 +1,6 @@
 [workspace]
 members = [
+  "erc20",
   "erc20_shield",
   "erc20_unshield",
   "erc20_join",

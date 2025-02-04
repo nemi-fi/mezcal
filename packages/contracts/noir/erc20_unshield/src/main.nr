@@ -12,12 +12,12 @@ fn main(
 ) -> pub common::Result<1, 1> {
     let mut context = common::Context::from(tree_roots);
 
-    common::Erc20Note::consume_and_sub(
+    erc20::Token::burn(
         &mut context,
+        from_secret_key,
         from_note_inputs,
         amount,
         change_randomness,
-        from_secret_key,
     );
 
     context.finish()
