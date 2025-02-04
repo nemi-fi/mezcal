@@ -11,19 +11,39 @@ impl Erc20Note {
     }
 
     pub fn consume_and_sub(
+        context: &mut crate::Context,
         note_consumption: crate::NoteConsumptionInputs,
         amount: crate::TokenAmount,
         randomness: Field,
-        tree_roots: crate::TreeRoots,
         secret_key: Field,
-    ) -> (Field, Self) {
-        let nullifier = note_consumption.consume(tree_roots, secret_key);
+    ) {
+        note_consumption.consume(context, secret_key);
         let change_note = Self {
             owner: note_consumption.note.owner,
             amount: note_consumption.note.amount - amount,
             randomness,
         };
-        (nullifier, change_note)
+        context.push_note_hash(change_note.hash());
+    }
+
+    pub fn consume_and_sub_or_ignore_if_empty(
+        context: &mut crate::Context,
+        note_consumption: crate::NoteConsumptionInputs,
+        amount: crate::TokenAmount,
+        randomness: Field,
+        secret_key: Field,
+    ) {
+        if note_consumption.note.is_set() {
+            Self::consume_and_sub(context, note_consumption, amount, randomness, secret_key);
+        } else {
+            assert_eq(
+                amount,
+                crate::TokenAmount { token: 0, amount: crate::U256::new() },
+                f"tried to consume an empty note using amount {amount}",
+            );
+            context.push_nullifier(0);
+            context.push_note_hash(0);
+        }
     }
 }
 

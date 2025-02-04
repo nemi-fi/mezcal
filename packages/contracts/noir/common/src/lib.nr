@@ -1,10 +1,12 @@
 use bignum::{BigNum, fields::U256::U256Params};
 use protocol_types::hash::poseidon2_hash_with_separator;
 
+mod context;
 mod note;
 mod owned_note;
 mod value_note;
 
+pub use context::{Context, Result};
 pub use note::{Note, Serialize};
 pub use owned_note::{NoteConsumptionInputs, OwnedNote};
 pub use value_note::Erc20Note;
@@ -56,6 +58,7 @@ pub fn compute_wa_address(secret_key: Field) -> WaAddress {
     poseidon2_hash_with_separator([secret_key], GENERATOR_INDEX__WA_ADDRESS)
 }
 
+#[derive(Eq)]
 pub struct TokenAmount {
     pub token: crate::EthAddress,
     pub amount: crate::U256,

@@ -1,20 +1,19 @@
 // Note: keep in sync with other languages
 global MAX_NOTES_TO_JOIN: u32 = 2;
 
-struct Result {
-    nullifiers: [Field; MAX_NOTES_TO_JOIN],
-    join_note_hash: Field,
-}
-
 fn main(
     tree_roots: pub common::TreeRoots,
     // params
     from_secret_key: Field,
     notes: [common::NoteConsumptionInputs; MAX_NOTES_TO_JOIN],
     join_randomness: Field,
-) -> pub Result {
-    let nullifiers =
-        notes.map(|note: common::NoteConsumptionInputs| note.consume(tree_roots, from_secret_key));
+    // TODO(security): add `to` address
+) -> pub common::Result<1, MAX_NOTES_TO_JOIN> {
+    let mut context = common::Context::from(tree_roots);
+
+    for note in notes {
+        note.consume(&mut context, from_secret_key);
+    }
 
     let token = notes[0].note.amount.token;
     let mut joined_amount = common::TokenAmount { token, amount: common::U256::new() };
@@ -23,12 +22,12 @@ fn main(
         joined_amount += notes[i].note.amount;
     }
 
-    let join_note_hash = common::Erc20Note {
+    context.push_note_hash(common::Erc20Note {
         owner: notes[0].note.owner,
         amount: joined_amount,
         randomness: join_randomness,
     }
-        .hash();
+        .hash());
 
-    Result { nullifiers, join_note_hash }
+    context.finish()
 }

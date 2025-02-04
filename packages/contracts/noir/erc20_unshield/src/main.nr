@@ -1,8 +1,3 @@
-struct Result {
-    nullifier: Field,
-    change_note_hash: Field,
-}
-
 fn main(
     tree_roots: pub common::TreeRoots,
     // from
@@ -14,14 +9,16 @@ fn main(
     amount: pub common::TokenAmount,
     // change
     change_randomness: Field,
-) -> pub Result {
-    let (nullifier, change_note) = common::Erc20Note::consume_and_sub(
+) -> pub common::Result<1, 1> {
+    let mut context = common::Context::from(tree_roots);
+
+    common::Erc20Note::consume_and_sub(
+        &mut context,
         from_note_inputs,
         amount,
         change_randomness,
-        tree_roots,
         from_secret_key,
     );
 
-    Result { nullifier, change_note_hash: change_note.hash() }
+    context.finish()
 }
