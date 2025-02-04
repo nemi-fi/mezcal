@@ -72,6 +72,10 @@ pub struct TokenAmount {
 }
 
 impl TokenAmount {
+    pub fn zero(token: crate::EthAddress) -> Self {
+        Self { token, amount: U256::new() }
+    }
+
     fn _check(self, other: Self) {
         assert_eq(self.token, other.token, "invalid token");
     }

@@ -161,11 +161,23 @@ export class PoolErc20Service {
     return { tx, note: fromNote };
   }
 
-  async join({ secretKey, notes }: { secretKey: string; notes: Erc20Note[] }) {
+  async join({
+    secretKey,
+    notes,
+    to,
+  }: {
+    secretKey: string;
+    notes: Erc20Note[];
+    to?: WaAddress;
+  }) {
     const { Fr } = await import("@aztec/aztec.js");
     assert(notes.length === MAX_NOTES_TO_JOIN, "invalid notes length");
 
     const join_randomness = Fr.random().toString();
+
+    to ??= (
+      await CompleteWaAddress.fromSecretKey(secretKey)
+    ).address.toString();
 
     const joinCircuit = (await this.circuits).join;
     console.time("join generateProof");
@@ -173,6 +185,7 @@ export class PoolErc20Service {
       tree_roots: await this.trees.getTreeRoots(),
       from_secret_key: secretKey,
       join_randomness,
+      to: { inner: to },
       notes: await Promise.all(
         notes.map((note) => this.toNoteConsumptionInputs(secretKey, note)),
       ),

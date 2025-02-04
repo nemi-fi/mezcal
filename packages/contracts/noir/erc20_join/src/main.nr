@@ -6,8 +6,8 @@ fn main(
     // params
     from_secret_key: Field,
     notes: [common::NoteConsumptionInputs; MAX_NOTES_TO_JOIN],
+    to: common::WaAddress,
     join_randomness: Field,
-    // TODO(security): add `to` address
 ) -> pub common::Result<1, MAX_NOTES_TO_JOIN> {
     let mut context = common::Context::from(tree_roots);
 
@@ -15,19 +15,15 @@ fn main(
         note.consume(&mut context, from_secret_key);
     }
 
-    let token = notes[0].note.amount.token;
-    let mut joined_amount = common::TokenAmount { token, amount: common::U256::new() };
+    let mut joined_amount = common::TokenAmount::zero(notes[0].note.amount.token);
     for i in 0..MAX_NOTES_TO_JOIN {
         assert(notes[i].note.is_set(), "invalid note");
         joined_amount += notes[i].note.amount;
     }
 
-    context.push_note_hash(common::Erc20Note {
-        owner: notes[0].note.owner,
-        amount: joined_amount,
-        randomness: join_randomness,
-    }
-        .hash());
+    let to_note =
+        common::Erc20Note { owner: to, amount: joined_amount, randomness: join_randomness };
+    context.push_note_hash(to_note.hash());
 
     context.finish()
 }
