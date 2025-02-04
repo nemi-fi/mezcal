@@ -1,11 +1,13 @@
-use common::WaAddress;
-
 fn main(
-    owner: WaAddress,
+    tree_roots: pub common::TreeRoots,
+    owner: common::WaAddress,
     amount: pub common::TokenAmount,
     randomness: Field,
-    note_hash: pub Field,
-) {
+) -> pub common::Result<1, 0> {
+    let mut context = common::Context::from(tree_roots);
+
     let note = common::Erc20Note { owner, amount, randomness };
-    assert(note.hash() == note_hash, "invalid note hash");
+    context.push_note_hash(note.hash());
+
+    context.finish()
 }

@@ -48,7 +48,9 @@ contract PoolERC20 is PoolGeneric {
     ) external {
         token.safeTransferFrom(msg.sender, address(this), amount);
 
-        PublicInputs.Type memory pi = PublicInputs.create(2 + U256_LIMBS);
+        PublicInputs.Type memory pi = PublicInputs.create(2 + 2 + U256_LIMBS);
+        pi.push(getNoteHashTree().root);
+        pi.push(getNullifierTree().root);
         pi.push(address(token));
         pi.pushUint256Limbs(amount);
         pi.push(note.noteHash);

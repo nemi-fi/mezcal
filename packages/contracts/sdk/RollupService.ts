@@ -84,6 +84,7 @@ export class PoolErc20Service {
     const noteInput = await this.toNoteInput(note);
     const shieldCircuit = (await this.circuits).shield;
     const { witness } = await shieldCircuit.noir.execute({
+      tree_roots: await this.trees.getTreeRoots(),
       owner: note.owner.address,
       amount: await note.amount.toNoir(),
       randomness: note.randomness,
