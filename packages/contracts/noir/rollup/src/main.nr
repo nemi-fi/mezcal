@@ -60,7 +60,8 @@ fn compute_new_note_hash_tree_snapshot<let LEAVES_LENGTH: u32, let SUBTREE_HEIGH
     )
 }
 
-fn compute_new_nullifier_tree_snapshot(
+// TODO(security): remove `unconstrained`. It's very expensive to prove in tests, so we mark it unconstrained while in active development
+unconstrained fn compute_new_nullifier_tree_snapshot(
     tree: AppendOnlyTreeSnapshot,
     new_nullifiers: [Field; common::MAX_NULLIFIERS_PER_ROLLUP],
     sorted_nullifiers: [Field; common::MAX_NULLIFIERS_PER_ROLLUP],
