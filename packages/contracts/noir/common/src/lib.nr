@@ -2,7 +2,8 @@
 use protocol_types::hash::poseidon2_hash_with_separator;
 
 mod context;
-mod uint253;
+mod uint252;
+// mod uint253;
 mod erc20_note;
 mod note;
 mod owned_note;
@@ -46,7 +47,7 @@ pub global GENERATOR_INDEX__NOTE_NULLIFIER: Field = 2;
 // Note: keep in sync with other languages
 pub global U256_LIMBS: u32 = 3;
 
-pub type U256 = uint253::U253;
+pub type U256 = uint252::U252;
 
 /// Walmart Aztec address
 #[derive(Eq, Serialize)]
