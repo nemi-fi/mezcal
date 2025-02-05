@@ -48,11 +48,12 @@ export const U256_LIMBS = 3;
 export const U256_LIMB_SIZE = 120;
 
 export function toNoirU256(value: bigint) {
-  assert(value >= 0n && value < 2n ** 256n, "invalid U256 value");
-  const limbs = splitBigIntToLimbs(value, U256_LIMB_SIZE, U256_LIMBS).map(
-    (x) => "0x" + x.toString(16),
-  );
-  return { limbs };
+  return { value: value.toString() };
+  // assert(value >= 0n && value < 2n ** 256n, "invalid U256 value");
+  // const limbs = splitBigIntToLimbs(value, U256_LIMB_SIZE, U256_LIMBS).map(
+  //   (x) => "0x" + x.toString(16),
+  // );
+  // return { limbs };
 }
 
 export function fromNoirU256(value: { limbs: (bigint | string)[] }) {

@@ -43,7 +43,7 @@ contract PoolERC20 is PoolGeneric {
     ) external {
         token.safeTransferFrom(msg.sender, address(this), amount);
 
-        PublicInputs.Type memory pi = PublicInputs.create(2 + 2 + U256_LIMBS);
+        PublicInputs.Type memory pi = PublicInputs.create(2 + 2 + 1);
         pi.push(getNoteHashTree().root);
         pi.push(getNullifierTree().root);
         pi.push(address(token));
@@ -70,7 +70,7 @@ contract PoolERC20 is PoolGeneric {
         bytes32 nullifier,
         NoteInput calldata changeNote
     ) external {
-        PublicInputs.Type memory pi = PublicInputs.create(6 + U256_LIMBS);
+        PublicInputs.Type memory pi = PublicInputs.create(6 + 1);
         // params
         pi.push(getNoteHashTree().root);
         pi.push(getNullifierTree().root);
