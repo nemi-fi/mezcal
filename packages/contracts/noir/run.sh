@@ -71,9 +71,14 @@ echo "Verification key created"
 co-noir verify --proof target/proof.0.proof --vk target/verification_key --hasher KECCAK --crs bn254_g2.dat
 echo "Proof verified"
 
+# check if verification keys are the same (yes/no)
+cmp -s target/verification_key target/verification_key_bb && echo "Verification keys are the same" || echo "Verification keys are different"
+cmp -s target/proof.0.proof target/proof_bb.proof && echo "Proofs are the same" || echo "Proofs are different"
+
 # Double check with bb
 bb write_vk_ultra_keccak_honk -b $CIRCUIT -o target/verification_key_bb
 echo "Verification key created with bb"
+echo "Verifying with bb"
 bb verify_ultra_keccak_honk -p target/proof.0.proof -k target/verification_key_bb
 echo "Proof verified with bb"
 
