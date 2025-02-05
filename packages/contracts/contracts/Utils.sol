@@ -64,6 +64,7 @@ library PublicInputs {
         return publicInputs;
     }
 
+    // TODO(security): remove this function
     function push(Type memory publicInputs, bytes32 value) internal pure {
         publicInputs.publicInputs[publicInputs.index] = value;
         unchecked {
@@ -71,6 +72,7 @@ library PublicInputs {
         }
     }
 
+    // TODO(security): remove this function
     function push(Type memory publicInputs, uint256 value) internal pure {
         push(publicInputs, bytes32(value));
     }
