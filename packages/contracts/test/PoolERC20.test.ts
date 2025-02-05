@@ -41,6 +41,8 @@ describe("PoolERC20", () => {
 
     await usdc.mintForTests(alice, await parseUnits(usdc, "1000000"));
     await usdc.connect(alice).approve(pool, ethers.MaxUint256);
+    await btc.mintForTests(bob, await parseUnits(btc, "1000000"));
+    await btc.connect(bob).approve(pool, ethers.MaxUint256);
 
     CompleteWaAddress = (await tsImport("../sdk", __filename)).sdk
       .CompleteWaAddress;
@@ -64,6 +66,7 @@ describe("PoolERC20", () => {
       unshield: noir.getCircuitJson("erc20_unshield"),
       join: noir.getCircuitJson("erc20_join"),
       transfer: noir.getCircuitJson("erc20_transfer"),
+      swap: noir.getCircuitJson("lob_router_swap"),
     });
 
     backendSdk = createBackendSdk(coreSdk, trees, {
@@ -348,5 +351,38 @@ describe("PoolERC20", () => {
     expect(
       await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey),
     ).to.deep.equal([changeNote]);
+  });
+
+  it("swaps", async () => {
+    const { note: aliceNote } = await sdk.poolErc20.shield({
+      account: alice,
+      token: usdc,
+      amount: 100n,
+      secretKey: aliceSecretKey,
+    });
+    const { note: bobNote } = await sdk.poolErc20.shield({
+      account: bob,
+      token: btc,
+      amount: 10n,
+      secretKey: bobSecretKey,
+    });
+
+    await backendSdk.rollup.rollup();
+
+    await sdk.lob.swap({
+      sellerSecretKey: aliceSecretKey,
+      sellerNote: aliceNote,
+      sellerAmount: 70n,
+      buyerSecretKey: bobSecretKey,
+      buyerNote: bobNote,
+      buyerAmount: 2n,
+    });
+
+    await backendSdk.rollup.rollup();
+
+    expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(30n);
+    expect(await sdk.poolErc20.balanceOf(btc, aliceSecretKey)).to.equal(2n);
+    expect(await sdk.poolErc20.balanceOf(usdc, bobSecretKey)).to.equal(70n);
+    expect(await sdk.poolErc20.balanceOf(btc, bobSecretKey)).to.equal(8n);
   });
 });
