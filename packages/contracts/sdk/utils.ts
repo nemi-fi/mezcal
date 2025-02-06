@@ -69,9 +69,11 @@ export async function prove(
   input: InputMap,
 ) {
   console.time(`${name} generateProof`);
-  const { witness } = await noir.execute(input);
-  let { proof } = await backend.generateProof(witness, { keccak: true });
+  const { witness, returnValue } = await noir.execute(input);
+  let { proof, publicInputs } = await backend.generateProof(witness, {
+    keccak: true,
+  });
   console.timeEnd(`${name} generateProof`);
   proof = proof.slice(4); // remove length
-  return { proof };
+  return { proof, witness, returnValue, publicInputs };
 }
