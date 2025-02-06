@@ -1,33 +1,33 @@
-import type { CompiledCircuit, InputMap } from "@noir-lang/noir_js";
+import type { CompiledCircuit } from "@noir-lang/noir_js";
 import { ethers } from "ethers";
 import fs from "node:fs";
 import path from "node:path";
-import toml from "smol-toml";
 import { z } from "zod";
-import { makeRunCommand } from "./utils.js";
+import { inWorkingDir, makeRunCommand } from "./utils.js";
 
 export class MpcProverService {
   async prove(params: {
     circuit: CompiledCircuit;
-    input0: InputMap;
-    input1: InputMap;
-    inputPublic: InputMap;
+    inputs0Shared: string[];
+    inputs1Shared: string[];
     // TODO: infer number of public inputs
     numPublicInputs: number;
   }) {
-    const id = crypto.randomUUID();
-    const workingDir = path.join(__dirname, "work-dirs", id);
-    fs.mkdirSync(workingDir, { recursive: true });
-    try {
-      fs.writeFileSync(
-        path.join(workingDir, "Prover1.toml"),
-        // merge public inputs into first prover because it does not matter which one public inputs are in
-        toml.stringify({ ...params.input0, ...params.inputPublic }),
-      );
-      fs.writeFileSync(
-        path.join(workingDir, "Prover2.toml"),
-        toml.stringify(params.input1),
-      );
+    return await inWorkingDir(async (workingDir) => {
+      for (const [traderIndex, inputsShared] of [
+        params.inputs0Shared,
+        params.inputs1Shared,
+      ].entries()) {
+        for (const [partyIndex, inputShared] of inputsShared.entries()) {
+          fs.writeFileSync(
+            path.join(
+              workingDir,
+              `Prover${traderIndex}.toml.${partyIndex}.shared`,
+            ),
+            ethers.getBytes(inputShared),
+          );
+        }
+      }
 
       const circuitPath = path.join(workingDir, "circuit.json");
       fs.writeFileSync(circuitPath, JSON.stringify(params.circuit));
@@ -59,8 +59,6 @@ export class MpcProverService {
       );
       // console.log("proof native\n", JSON.stringify(Array.from(proof)));
       return { proof, publicInputs };
-    } finally {
-      fs.rmSync(workingDir, { recursive: true });
-    }
+    });
   }
 }

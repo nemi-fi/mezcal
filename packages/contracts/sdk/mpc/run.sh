@@ -11,15 +11,10 @@ fi
 WORK_DIR=$1
 CIRCUIT=$2
 
-PROVER0_TOML=$WORK_DIR/Prover1.toml
-PROVER1_TOML=$WORK_DIR/Prover2.toml
+PROVER0_TOML=$WORK_DIR/Prover0.toml
+PROVER1_TOML=$WORK_DIR/Prover1.toml
 # copy from https://github.com/TaceoLabs/co-snarks/tree/e96a712dfa987fb39e17232ef11d067b29b62aef/co-noir/co-noir/examples/configs
 PARTY_CONFIGS_DIR=configs
-
-# split input into shares
-co-noir split-input --circuit $CIRCUIT --input $PROVER0_TOML --protocol REP3 --out-dir $WORK_DIR
-co-noir split-input --circuit $CIRCUIT --input $PROVER1_TOML --protocol REP3 --out-dir $WORK_DIR
-echo "Inputs split"
 
 # merge inputs into single input file
 timeStart "merge-input-shares"

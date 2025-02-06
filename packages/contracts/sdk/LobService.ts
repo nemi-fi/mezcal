@@ -2,6 +2,7 @@ import { type AsyncOrSync } from "ts-essentials";
 import { type PoolERC20 } from "../typechain-types";
 import { NoteInputStruct } from "../typechain-types/contracts/PoolERC20";
 import { MpcProverService } from "./mpc/MpcNetworkService.js";
+import { splitInput } from "./mpc/utils";
 import { type ITreesService } from "./RemoteTreesService.js";
 import {
   CompleteWaAddress,
@@ -79,7 +80,6 @@ export class LobService {
       seller_order,
       seller_randomness: sellerRandomness,
     };
-
     const input1 = {
       buyer_secret_key: params.buyerSecretKey,
       buyer_note: await this.poolErc20.toNoteConsumptionInputs(
@@ -89,12 +89,17 @@ export class LobService {
       buyer_order,
       buyer_randomness: buyerRandomness,
     };
+    const inputs0Shared = await splitInput(swapCircuit.circuit, {
+      // merge public inputs into first input because it does not matter how public inputs are passed
+      ...input0,
+      ...inputPublic,
+    });
+    const inputs1Shared = await splitInput(swapCircuit.circuit, input1);
     // const { proof } = await prove("swap", swapCircuit, input);
     const { proof } = await this.mpcProver.prove({
       circuit: swapCircuit.circuit,
-      input0,
-      input1,
-      inputPublic,
+      inputs0Shared,
+      inputs1Shared,
       numPublicInputs: 8,
     });
     const noteInputs: [
