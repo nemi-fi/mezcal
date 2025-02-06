@@ -7,7 +7,7 @@ source timer.sh
 nargo compile --silence-warnings
 echo "Compiled"
 
-CIRCUIT_NAME=erc20_transfer
+CIRCUIT_NAME=lob_router_swap
 CIRCUIT=target/$CIRCUIT_NAME.json
 
 # merge Prover1.toml and Prover2.toml into Prover.toml

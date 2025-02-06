@@ -95,6 +95,13 @@ impl std::ops::Sub for TokenAmount {
     }
 }
 
+impl std::cmp::Ord for TokenAmount {
+    fn cmp(self, other: Self) -> std::cmp::Ordering {
+        self._check(other);
+        self.amount.cmp(other.amount)
+    }
+}
+
 pub struct TreeRoots {
     pub note_hash_root: Field,
     pub nullifier_root: Field,

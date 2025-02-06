@@ -3,6 +3,7 @@ import { mapValues } from "lodash-es";
 import type { AsyncOrSync } from "ts-essentials";
 import type { PoolERC20 } from "../typechain-types/index.js";
 import { EncryptionService } from "./EncryptionService.js";
+import { LobService } from "./LobService.js";
 import { type ITreesService } from "./RemoteTreesService.js";
 import { PoolErc20Service } from "./RollupService.js";
 
@@ -24,7 +25,7 @@ export function createInterfaceSdk(
   coreSdk: ReturnType<typeof createCoreSdk>,
   trees: ITreesService,
   compiledCircuits: Record<
-    "shield" | "unshield" | "join" | "transfer",
+    "shield" | "unshield" | "join" | "transfer" | "swap",
     AsyncOrSync<CompiledCircuit>
   >,
 ) {
@@ -37,9 +38,11 @@ export function createInterfaceSdk(
     trees,
     circuits,
   );
+  const lob = new LobService(coreSdk.contract, trees, poolErc20, circuits);
 
   return {
     poolErc20,
+    lob,
   };
 }
 
