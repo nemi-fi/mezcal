@@ -1,6 +1,6 @@
 import type { Fr } from "@aztec/aztec.js";
 import type { UltraHonkBackend } from "@aztec/bb.js";
-import type { Noir } from "@noir-lang/noir_js";
+import type { CompiledCircuit, Noir } from "@noir-lang/noir_js";
 import { utils } from "@repo/utils";
 import { ethers } from "ethers";
 import { compact, orderBy, times } from "lodash-es";
@@ -69,8 +69,7 @@ export class PoolErc20Service {
     amount: bigint;
     secretKey: string;
   }) {
-    const { Fr } = await import("@aztec/aztec.js");
-    const randomness = Fr.random().toString();
+    const randomness = await getRandomness();
     const note = await Erc20Note.from({
       owner: await CompleteWaAddress.fromSecretKey(secretKey),
       amount: await TokenAmount.from({
@@ -110,10 +109,8 @@ export class PoolErc20Service {
     to: string;
     amount: bigint;
   }) {
-    const { Fr } = await import("@aztec/aztec.js");
-
     assert(utils.isAddressEqual(token, fromNote.amount.token), "invalid token");
-    const change_randomness = Fr.random().toString();
+    const change_randomness = await getRandomness();
     const changeNote = await Erc20Note.from({
       owner: fromNote.owner,
       amount: await TokenAmount.from({
@@ -166,10 +163,9 @@ export class PoolErc20Service {
     notes: Erc20Note[];
     to?: WaAddress;
   }) {
-    const { Fr } = await import("@aztec/aztec.js");
     assert(notes.length === MAX_NOTES_TO_JOIN, "invalid notes length");
 
-    const join_randomness = Fr.random().toString();
+    const join_randomness = await getRandomness();
 
     to ??= (
       await CompleteWaAddress.fromSecretKey(secretKey)
@@ -220,12 +216,10 @@ export class PoolErc20Service {
     to: CompleteWaAddress;
     amount: TokenAmount;
   }) {
-    const { Fr } = await import("@aztec/aztec.js");
-
     const nullifier = await fromNote.computeNullifier(secretKey);
 
-    const to_randomness = Fr.random().toString();
-    const change_randomness = Fr.random().toString();
+    const to_randomness = await getRandomness();
+    const change_randomness = await getRandomness();
     const input = {
       tree_roots: await this.trees.getTreeRoots(),
       from_note_inputs: await this.toNoteConsumptionInputs(secretKey, fromNote),
@@ -538,6 +532,7 @@ export class CompleteWaAddress {
 }
 
 export type NoirAndBackend = {
+  circuit: CompiledCircuit;
   noir: Noir;
   backend: UltraHonkBackend;
 };
@@ -559,4 +554,9 @@ function sortEvents<
     events,
     (e) => `${e.blockNumber}-${e.transactionIndex}-${e.index}`,
   );
+}
+
+export async function getRandomness() {
+  const { Fr } = await import("@aztec/aztec.js");
+  return Fr.random().toString();
 }

@@ -1,10 +1,14 @@
-import { type AsyncOrSync } from "ts-essentials";
+import { uniq } from "lodash";
+import { assert, type AsyncOrSync } from "ts-essentials";
 import { type PoolERC20 } from "../typechain-types";
 import { NoteInputStruct } from "../typechain-types/contracts/PoolERC20";
+import { MpcProverService, type Side } from "./mpc/MpcNetworkService.js";
+import { splitInput } from "./mpc/utils.js";
 import { type ITreesService } from "./RemoteTreesService.js";
 import {
   CompleteWaAddress,
   Erc20Note,
+  getRandomness,
   TokenAmount,
   type NoirAndBackend,
   type PoolErc20Service,
@@ -16,6 +20,7 @@ export class LobService {
     private contract: PoolERC20,
     private trees: ITreesService,
     private poolErc20: PoolErc20Service,
+    private mpcProver: MpcProverService,
     private circuits: AsyncOrSync<{
       swap: NoirAndBackend;
     }>,
@@ -29,11 +34,9 @@ export class LobService {
     buyerNote: Erc20Note;
     buyerAmount: TokenAmount;
   }) {
-    const { Fr } = await import("@aztec/aztec.js");
-
     const swapCircuit = (await this.circuits).swap;
-    const sellerRandomness = Fr.random().toString();
-    const buyerRandomness = Fr.random().toString();
+    const sellerRandomness = await getRandomness();
+    const buyerRandomness = await getRandomness();
 
     const sellerChangeNote = await Erc20Note.from({
       owner: await CompleteWaAddress.fromSecretKey(params.sellerSecretKey),
@@ -76,7 +79,6 @@ export class LobService {
       ),
       seller_order,
       seller_randomness: sellerRandomness,
-
       buyer_secret_key: params.buyerSecretKey,
       buyer_note: await this.poolErc20.toNoteConsumptionInputs(
         params.buyerSecretKey,
@@ -109,4 +111,101 @@ export class LobService {
     const receipt = await tx.wait();
     console.log("swap gas used", receipt?.gasUsed);
   }
+
+  async requestSwap(params: {
+    secretKey: string;
+    note: Erc20Note;
+    sellAmount: TokenAmount;
+    buyAmount: TokenAmount;
+  }) {
+    const swapCircuit = (await this.circuits).swap;
+    const randomness = await getRandomness();
+
+    const changeNote = await Erc20Note.from({
+      owner: await CompleteWaAddress.fromSecretKey(params.secretKey),
+      amount: params.note.amount.sub(params.sellAmount),
+      randomness,
+    });
+    const swapNote = await Erc20Note.from({
+      owner: await CompleteWaAddress.fromSecretKey(params.secretKey),
+      amount: params.buyAmount,
+      randomness,
+    });
+
+    const order = {
+      sell_amount: await params.sellAmount.toNoir(),
+      buy_amount: await params.buyAmount.toNoir(),
+      randomness,
+    };
+
+    // deterministic side
+    const side: Side =
+      params.sellAmount.token.toLowerCase() <
+      params.buyAmount.token.toLowerCase()
+        ? "seller"
+        : "buyer";
+    const input = {
+      [`${side}_secret_key`]: params.secretKey,
+      [`${side}_note`]: await this.poolErc20.toNoteConsumptionInputs(
+        params.secretKey,
+        params.note,
+      ),
+      [`${side}_order`]: order,
+      [`${side}_randomness`]: randomness,
+    };
+    console.log("side", side, randomness);
+    // only one trading party need to provide public inputs
+    const inputPublic =
+      side === "seller"
+        ? {
+            tree_roots: await this.trees.getTreeRoots(),
+          }
+        : undefined;
+    const inputsShared = await splitInput(swapCircuit.circuit, {
+      // merge public inputs into first input because it does not matter how public inputs are passed
+      ...input,
+      ...inputPublic,
+    });
+    const orderId = randomness; // TODO: is randomness a good order id?
+    const proofs = await this.mpcProver.prove(inputsShared, {
+      orderId,
+      side,
+      circuit: swapCircuit.circuit,
+      numPublicInputs: 8,
+    });
+    assert(uniq(proofs).length === 1, "proofs mismatch");
+    const proof = proofs[0]!;
+    return {
+      proof,
+      side,
+      changeNote: await changeNote.toSolidityNoteInput(),
+      swapNote: await swapNote.toSolidityNoteInput(),
+      nullifier: (
+        await params.note.computeNullifier(params.secretKey)
+      ).toString(),
+    };
+  }
+
+  async commitSwap(sellerSwap: SwapResult, buyerSwap: SwapResult) {
+    assert(
+      sellerSwap.proof === buyerSwap.proof,
+      "seller & buyer proof mismatch",
+    );
+    const proof = sellerSwap.proof;
+
+    const tx = await this.contract.swap(
+      proof,
+      [
+        sellerSwap.changeNote,
+        buyerSwap.swapNote,
+        buyerSwap.changeNote,
+        sellerSwap.swapNote,
+      ],
+      [sellerSwap.nullifier, buyerSwap.nullifier],
+    );
+    const receipt = await tx.wait();
+    console.log("swap gas used", receipt?.gasUsed);
+  }
 }
+
+type SwapResult = Awaited<ReturnType<LobService["requestSwap"]>>;
