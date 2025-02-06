@@ -1,12 +1,15 @@
 import { type AsyncOrSync } from "ts-essentials";
 import { type PoolERC20 } from "../typechain-types";
-import { type ITreesService } from "./RemoteTreesService";
+import { NoteInputStruct } from "../typechain-types/contracts/PoolERC20";
+import { type ITreesService } from "./RemoteTreesService.js";
 import {
+  CompleteWaAddress,
   Erc20Note,
+  TokenAmount,
   type NoirAndBackend,
   type PoolErc20Service,
-} from "./RollupService";
-import { toNoirU256 } from "./utils";
+} from "./RollupService.js";
+import { prove, toNoirU256 } from "./utils.js";
 
 export class LobService {
   constructor(
@@ -29,9 +32,41 @@ export class LobService {
     const { Fr } = await import("@aztec/aztec.js");
 
     const swapCircuit = (await this.circuits).swap;
-    console.time("swap generateProof");
     const sellerRandomness = Fr.random().toString();
     const buyerRandomness = Fr.random().toString();
+
+    const sellerChangeNote = await Erc20Note.from({
+      owner: await CompleteWaAddress.fromSecretKey(params.sellerSecretKey),
+      amount: await TokenAmount.from({
+        token: params.sellerNote.amount.token,
+        amount: params.sellerNote.amount.amount - params.sellerAmount,
+      }),
+      randomness: sellerRandomness,
+    });
+    const buyerChangeNote = await Erc20Note.from({
+      owner: await CompleteWaAddress.fromSecretKey(params.buyerSecretKey),
+      amount: await TokenAmount.from({
+        token: params.buyerNote.amount.token,
+        amount: params.buyerNote.amount.amount - params.buyerAmount,
+      }),
+      randomness: buyerRandomness,
+    });
+    const sellerSwapNote = await Erc20Note.from({
+      owner: await CompleteWaAddress.fromSecretKey(params.sellerSecretKey),
+      amount: await TokenAmount.from({
+        token: params.buyerNote.amount.token,
+        amount: params.buyerAmount,
+      }),
+      randomness: sellerRandomness,
+    });
+    const buyerSwapNote = await Erc20Note.from({
+      owner: await CompleteWaAddress.fromSecretKey(params.buyerSecretKey),
+      amount: await TokenAmount.from({
+        token: params.sellerNote.amount.token,
+        amount: params.sellerAmount,
+      }),
+      randomness: buyerRandomness,
+    });
 
     const input = {
       tree_roots: await this.trees.getTreeRoots(),
@@ -51,10 +86,28 @@ export class LobService {
       buyer_amount: toNoirU256(params.buyerAmount),
       buyer_randomness: buyerRandomness,
     };
-    // console.log("input\n", JSON.stringify(input));
-    const { witness } = await swapCircuit.noir.execute(input);
-    const { proof } = await swapCircuit.backend.generateProof(witness);
-    console.timeEnd("swap generateProof");
-    // TODO: commit note hashes and nullifiers to blockchain
+    const { proof } = await prove("swap", swapCircuit, input);
+    const noteInputs: [
+      NoteInputStruct,
+      NoteInputStruct,
+      NoteInputStruct,
+      NoteInputStruct,
+    ] = [
+      await sellerChangeNote.toSolidityNoteInput(),
+      await buyerSwapNote.toSolidityNoteInput(),
+      await buyerChangeNote.toSolidityNoteInput(),
+      await sellerSwapNote.toSolidityNoteInput(),
+    ];
+    const nullifiers: [string, string] = [
+      (
+        await params.sellerNote.computeNullifier(params.sellerSecretKey)
+      ).toString(),
+      (
+        await params.buyerNote.computeNullifier(params.buyerSecretKey)
+      ).toString(),
+    ];
+    const tx = await this.contract.swap(proof, noteInputs, nullifiers);
+    const receipt = await tx.wait();
+    console.log("swap gas used", receipt?.gasUsed);
   }
 }
