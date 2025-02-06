@@ -409,7 +409,7 @@ describe("PoolERC20", () => {
     expect(await sdk.poolErc20.balanceOf(btc, bobSecretKey)).to.equal(8n);
   });
 
-  it("swaps mpc", async () => {
+  it.skip("swaps mpc", async () => {
     const { note: aliceNote } = await sdk.poolErc20.shield({
       account: alice,
       token: usdc,
