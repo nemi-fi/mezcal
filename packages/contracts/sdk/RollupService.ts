@@ -464,6 +464,7 @@ export class Erc20Note {
   }
 }
 
+// TODO: replace with uniswap's CurrencyAmount
 export class TokenAmount {
   constructor(
     readonly token: string,
