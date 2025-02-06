@@ -1,9 +1,7 @@
-// use bignum::{BigNum, fields::U256::U256Params};
 use protocol_types::hash::poseidon2_hash_with_separator;
 
 mod context;
 mod uint252;
-// mod uint253;
 mod erc20_note;
 mod note;
 mod owned_note;
