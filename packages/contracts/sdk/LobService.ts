@@ -6,6 +6,7 @@ import { type ITreesService } from "./RemoteTreesService.js";
 import {
   CompleteWaAddress,
   Erc20Note,
+  getRandomness,
   TokenAmount,
   type NoirAndBackend,
   type PoolErc20Service,
@@ -30,11 +31,9 @@ export class LobService {
     buyerNote: Erc20Note;
     buyerAmount: TokenAmount;
   }) {
-    const { Fr } = await import("@aztec/aztec.js");
-
     const swapCircuit = (await this.circuits).swap;
-    const sellerRandomness = Fr.random().toString();
-    const buyerRandomness = Fr.random().toString();
+    const sellerRandomness = await getRandomness();
+    const buyerRandomness = await getRandomness();
 
     const sellerChangeNote = await Erc20Note.from({
       owner: await CompleteWaAddress.fromSecretKey(params.sellerSecretKey),
