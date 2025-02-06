@@ -3,7 +3,7 @@ import { assert, type AsyncOrSync } from "ts-essentials";
 import { type PoolERC20 } from "../typechain-types";
 import { NoteInputStruct } from "../typechain-types/contracts/PoolERC20";
 import { MpcProverService, type Side } from "./mpc/MpcNetworkService.js";
-import { splitInput, splitInput2 } from "./mpc/utils.js";
+import { splitInput } from "./mpc/utils.js";
 import { type ITreesService } from "./RemoteTreesService.js";
 import {
   CompleteWaAddress,
@@ -13,6 +13,7 @@ import {
   type NoirAndBackend,
   type PoolErc20Service,
 } from "./RollupService.js";
+import { prove } from "./utils.js";
 
 export class LobService {
   constructor(
@@ -69,10 +70,8 @@ export class LobService {
       randomness: buyerRandomness,
     };
 
-    const inputPublic = {
+    const input = {
       tree_roots: await this.trees.getTreeRoots(),
-    };
-    const input0 = {
       seller_secret_key: params.sellerSecretKey,
       seller_note: await this.poolErc20.toNoteConsumptionInputs(
         params.sellerSecretKey,
@@ -80,8 +79,6 @@ export class LobService {
       ),
       seller_order,
       seller_randomness: sellerRandomness,
-    };
-    const input1 = {
       buyer_secret_key: params.buyerSecretKey,
       buyer_note: await this.poolErc20.toNoteConsumptionInputs(
         params.buyerSecretKey,
@@ -90,19 +87,7 @@ export class LobService {
       buyer_order,
       buyer_randomness: buyerRandomness,
     };
-    const inputs0Shared = await splitInput(swapCircuit.circuit, {
-      // merge public inputs into first input because it does not matter how public inputs are passed
-      ...input0,
-      ...inputPublic,
-    });
-    const inputs1Shared = await splitInput(swapCircuit.circuit, input1);
-    // const { proof } = await prove("swap", swapCircuit, input);
-    const { proof } = await this.mpcProver.prove({
-      circuit: swapCircuit.circuit,
-      inputs0Shared,
-      inputs1Shared,
-      numPublicInputs: 8,
-    });
+    const { proof } = await prove("swap", swapCircuit, input);
     const noteInputs: [
       NoteInputStruct,
       NoteInputStruct,
@@ -176,7 +161,7 @@ export class LobService {
             tree_roots: await this.trees.getTreeRoots(),
           }
         : undefined;
-    const inputsShared = await splitInput2(swapCircuit.circuit, {
+    const inputsShared = await splitInput(swapCircuit.circuit, {
       // merge public inputs into first input because it does not matter how public inputs are passed
       ...input,
       ...inputPublic,
@@ -194,7 +179,6 @@ export class LobService {
         });
       }),
     );
-    console.log("got proofs", proofs.length);
     assert(uniq(proofs).length === 1, "proofs mismatch");
     const proof = proofs[0]!;
     return {

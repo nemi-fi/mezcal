@@ -1,15 +1,17 @@
 import type { CompiledCircuit } from "@noir-lang/noir_js";
 import { ethers } from "ethers";
-import { omit, range } from "lodash";
+import { omit } from "lodash";
 import fs from "node:fs";
 import path from "node:path";
-import { assert } from "ts-essentials";
 import { z } from "zod";
 import { promiseWithResolvers } from "../utils.js";
 import { inWorkingDir, makeRunCommand } from "./utils.js";
 
 export type OrderId = string & { __brand: "OrderId" };
 export type PartyIndex = 0 | 1 | 2;
+/**
+ * Deterministically determined based on the tokens being swapped
+ */
 export type Side = "seller" | "buyer";
 
 type Order = {
@@ -86,8 +88,8 @@ export class MpcProverService {
     console.log(
       "executing orders",
       params.partyIndex,
-      omit(order, "inputShared"),
-      omit(otherOrder, "inputShared"),
+      omit(order, ["inputShared", "result"]),
+      omit(otherOrder, ["inputShared", "result"]),
     );
     try {
       const { proof } = await this.proveAsParty({
@@ -97,7 +99,6 @@ export class MpcProverService {
         input1Shared: inputsShared[1],
         numPublicInputs: params.numPublicInputs,
       });
-      console.log("got proof", orderId, params.partyIndex, proof.length);
       const proofHex = ethers.hexlify(proof);
       order.result.resolve(proofHex);
       otherOrder.result.resolve(proofHex);
@@ -165,32 +166,5 @@ export class MpcProverService {
       // console.log("proof native\n", JSON.stringify(Array.from(proof)));
       return { proof, publicInputs };
     });
-  }
-
-  async prove(params: {
-    circuit: CompiledCircuit;
-    inputs0Shared: string[];
-    inputs1Shared: string[];
-    // TODO: infer number of public inputs
-    numPublicInputs: number;
-  }) {
-    assert(
-      params.inputs0Shared.length === params.inputs1Shared.length,
-      "inputs length mismatch",
-    );
-    const proofs = await Promise.all(
-      range(params.inputs0Shared.length).map(async (i) => {
-        const input0Shared = params.inputs0Shared[i]!;
-        const input1Shared = params.inputs1Shared[i]!;
-        return await this.proveAsParty({
-          partyIndex: i,
-          circuit: params.circuit,
-          input0Shared,
-          input1Shared,
-          numPublicInputs: params.numPublicInputs,
-        });
-      }),
-    );
-    return proofs[0]!;
   }
 }
