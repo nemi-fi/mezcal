@@ -409,7 +409,13 @@ describe("PoolERC20", () => {
     expect(await sdk.poolErc20.balanceOf(btc, bobSecretKey)).to.equal(8n);
   });
 
-  it.skip("swaps mpc", async () => {
+  it("swaps mpc", async () => {
+    if (process.env.CI) {
+      // TODO: install co-noir on github actions and remove this
+      console.log("skipping mpc swap test");
+      return;
+    }
+
     const { note: aliceNote } = await sdk.poolErc20.shield({
       account: alice,
       token: usdc,
