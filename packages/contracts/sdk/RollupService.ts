@@ -1,6 +1,6 @@
 import type { Fr } from "@aztec/aztec.js";
 import type { UltraHonkBackend } from "@aztec/bb.js";
-import type { Noir } from "@noir-lang/noir_js";
+import type { CompiledCircuit, Noir } from "@noir-lang/noir_js";
 import { utils } from "@repo/utils";
 import { ethers } from "ethers";
 import { compact, orderBy, times } from "lodash-es";
@@ -538,6 +538,7 @@ export class CompleteWaAddress {
 }
 
 export type NoirAndBackend = {
+  circuit: CompiledCircuit;
   noir: Noir;
   backend: UltraHonkBackend;
 };

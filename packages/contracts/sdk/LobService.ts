@@ -1,6 +1,7 @@
 import { type AsyncOrSync } from "ts-essentials";
 import { type PoolERC20 } from "../typechain-types";
 import { NoteInputStruct } from "../typechain-types/contracts/PoolERC20";
+import { MpcProverService } from "./mpc/MpcNetworkService.js";
 import { type ITreesService } from "./RemoteTreesService.js";
 import {
   CompleteWaAddress,
@@ -9,13 +10,13 @@ import {
   type NoirAndBackend,
   type PoolErc20Service,
 } from "./RollupService.js";
-import { prove } from "./utils.js";
 
 export class LobService {
   constructor(
     private contract: PoolERC20,
     private trees: ITreesService,
     private poolErc20: PoolErc20Service,
+    private mpcProver: MpcProverService,
     private circuits: AsyncOrSync<{
       swap: NoirAndBackend;
     }>,
@@ -67,8 +68,10 @@ export class LobService {
       randomness: buyerRandomness,
     };
 
-    const input = {
+    const inputPublic = {
       tree_roots: await this.trees.getTreeRoots(),
+    };
+    const input0 = {
       seller_secret_key: params.sellerSecretKey,
       seller_note: await this.poolErc20.toNoteConsumptionInputs(
         params.sellerSecretKey,
@@ -76,7 +79,9 @@ export class LobService {
       ),
       seller_order,
       seller_randomness: sellerRandomness,
+    };
 
+    const input1 = {
       buyer_secret_key: params.buyerSecretKey,
       buyer_note: await this.poolErc20.toNoteConsumptionInputs(
         params.buyerSecretKey,
@@ -85,7 +90,13 @@ export class LobService {
       buyer_order,
       buyer_randomness: buyerRandomness,
     };
-    const { proof } = await prove("swap", swapCircuit, input);
+    // const { proof } = await prove("swap", swapCircuit, input);
+    const { proof } = await this.mpcProver.prove({
+      circuit: swapCircuit.circuit,
+      input0,
+      input1,
+      inputPublic,
+    });
     const noteInputs: [
       NoteInputStruct,
       NoteInputStruct,

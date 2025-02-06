@@ -6,6 +6,7 @@ import { EncryptionService } from "./EncryptionService.js";
 import { LobService } from "./LobService.js";
 import { type ITreesService } from "./RemoteTreesService.js";
 import { PoolErc20Service } from "./RollupService.js";
+import { MpcProverService } from "./mpc/MpcNetworkService.js";
 
 export * from "./EncryptionService.js";
 export * from "./NonMembershipTree.js";
@@ -38,7 +39,14 @@ export function createInterfaceSdk(
     trees,
     circuits,
   );
-  const lob = new LobService(coreSdk.contract, trees, poolErc20, circuits);
+  const mpcProver = new MpcProverService();
+  const lob = new LobService(
+    coreSdk.contract,
+    trees,
+    poolErc20,
+    mpcProver,
+    circuits,
+  );
 
   return {
     poolErc20,
@@ -57,5 +65,5 @@ async function getCircuit(artifact: AsyncOrSync<CompiledCircuit>) {
   artifact = await artifact;
   const noir = new Noir(artifact);
   const backend = new UltraHonkBackend(artifact.bytecode);
-  return { noir, backend };
+  return { circuit: artifact, noir, backend };
 }

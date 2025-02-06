@@ -14,17 +14,17 @@ export function createBackendSdk(
     rollup: utils.iife(async () => {
       const { Noir } = await import("@noir-lang/noir_js");
       const { UltraHonkBackend } = await import("@aztec/bb.js");
-      const noir = new Noir(await compiledCircuits.rollup);
+      const circuit = await compiledCircuits.rollup;
+      const noir = new Noir(circuit);
       // TODO(perf): write and use a NativeUltraHonkBackend
       // const backend = new NativeUltraPlonkBackend(
       //   `${process.env.HOME}/.bb/bb`,
       //   await compiledCircuits.rollup,
       // ) as unknown as UltraPlonkBackend;
-      const backend = new UltraHonkBackend(
-        (await compiledCircuits.rollup).bytecode,
-        { threads: os.cpus().length },
-      );
-      return { noir, backend };
+      const backend = new UltraHonkBackend(circuit.bytecode, {
+        threads: os.cpus().length,
+      });
+      return { circuit, noir, backend };
     }),
   });
   return {
