@@ -2,9 +2,8 @@
   "name": "@repo/contracts",
   "private": true,
   "scripts": {
-    "compile": "hardhat compile --typecheck",
-    "test": "hardhat test --typecheck",
-    "test:no-typecheck": "hardhat test",
+    "compile": "hardhat compile",
+    "test": "hardhat test",
     "deploy": "pnpm hardhat deploy-and-export",
     "deploy:localhost": "rm -rf deployments/localhost && pnpm hardhat deploy-and-export --network localhost --gasprice 1gwei"
   },

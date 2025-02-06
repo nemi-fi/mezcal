@@ -5,7 +5,7 @@ fn main(
     from_note_inputs: erc20::Erc20NoteConsumptionInputs,
     // transfer params
     to: common::WaAddress,
-    amount: common::U256,
+    amount: common::TokenAmount,
     to_randomness: Field,
     // change
     change_randomness: Field,

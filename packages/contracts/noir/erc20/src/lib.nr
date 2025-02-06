@@ -52,22 +52,17 @@ pub mod Token {
         from_secret_key: Field,
         from_note_inputs: common::Erc20NoteConsumptionInputs,
         to: common::WaAddress,
-        amount: common::U256,
+        amount: common::TokenAmount,
         to_randomness: Field,
         change_randomness: Field,
     ) {
         common::Erc20Note::sub_and_emit_change(
             context,
             [from_note_inputs],
-            common::TokenAmount { token: from_note_inputs.note.amount.token, amount },
+            amount,
             change_randomness,
             from_secret_key,
         );
-        common::Erc20Note {
-            owner: to,
-            amount: common::TokenAmount { token: from_note_inputs.note.amount.token, amount },
-            randomness: to_randomness,
-        }
-            .emit(context);
+        common::Erc20Note { owner: to, amount, randomness: to_randomness }.emit(context);
     }
 }

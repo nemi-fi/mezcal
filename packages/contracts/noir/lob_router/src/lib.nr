@@ -3,11 +3,11 @@ mod LobRouter {
         context: &mut common::Context,
         seller_secret_key: Field,
         seller_note: erc20::Erc20NoteConsumptionInputs,
-        seller_amount: common::U256,
+        seller_amount: common::TokenAmount,
         seller_randomness: Field,
         buyer_secret_key: Field,
         buyer_note: erc20::Erc20NoteConsumptionInputs,
-        buyer_amount: common::U256,
+        buyer_amount: common::TokenAmount,
         buyer_randomness: Field,
     ) {
         // TODO(security): orders must be signed by parties and the prices should match

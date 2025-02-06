@@ -3,12 +3,12 @@ fn main(
     // seller
     seller_secret_key: Field,
     seller_note: erc20::Erc20NoteConsumptionInputs,
-    seller_amount: common::U256,
+    seller_amount: common::TokenAmount,
     seller_randomness: Field,
     // buyer
     buyer_secret_key: Field,
     buyer_note: erc20::Erc20NoteConsumptionInputs,
-    buyer_amount: common::U256,
+    buyer_amount: common::TokenAmount,
     buyer_randomness: Field,
 ) -> pub common::Result<4, 2> {
     let mut context = common::Context::from(tree_roots);

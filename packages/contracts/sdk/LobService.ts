@@ -9,7 +9,7 @@ import {
   type NoirAndBackend,
   type PoolErc20Service,
 } from "./RollupService.js";
-import { prove, toNoirU256 } from "./utils.js";
+import { prove } from "./utils.js";
 
 export class LobService {
   constructor(
@@ -24,10 +24,10 @@ export class LobService {
   async swap(params: {
     sellerSecretKey: string;
     sellerNote: Erc20Note;
-    sellerAmount: bigint;
+    sellerAmount: TokenAmount;
     buyerSecretKey: string;
     buyerNote: Erc20Note;
-    buyerAmount: bigint;
+    buyerAmount: TokenAmount;
   }) {
     const { Fr } = await import("@aztec/aztec.js");
 
@@ -37,34 +37,22 @@ export class LobService {
 
     const sellerChangeNote = await Erc20Note.from({
       owner: await CompleteWaAddress.fromSecretKey(params.sellerSecretKey),
-      amount: await TokenAmount.from({
-        token: params.sellerNote.amount.token,
-        amount: params.sellerNote.amount.amount - params.sellerAmount,
-      }),
+      amount: params.sellerNote.amount.sub(params.sellerAmount),
       randomness: sellerRandomness,
     });
     const buyerChangeNote = await Erc20Note.from({
       owner: await CompleteWaAddress.fromSecretKey(params.buyerSecretKey),
-      amount: await TokenAmount.from({
-        token: params.buyerNote.amount.token,
-        amount: params.buyerNote.amount.amount - params.buyerAmount,
-      }),
+      amount: params.buyerNote.amount.sub(params.buyerAmount),
       randomness: buyerRandomness,
     });
     const sellerSwapNote = await Erc20Note.from({
       owner: await CompleteWaAddress.fromSecretKey(params.sellerSecretKey),
-      amount: await TokenAmount.from({
-        token: params.buyerNote.amount.token,
-        amount: params.buyerAmount,
-      }),
+      amount: params.buyerAmount,
       randomness: sellerRandomness,
     });
     const buyerSwapNote = await Erc20Note.from({
       owner: await CompleteWaAddress.fromSecretKey(params.buyerSecretKey),
-      amount: await TokenAmount.from({
-        token: params.sellerNote.amount.token,
-        amount: params.sellerAmount,
-      }),
+      amount: params.sellerAmount,
       randomness: buyerRandomness,
     });
 
@@ -75,7 +63,7 @@ export class LobService {
         params.sellerSecretKey,
         params.sellerNote,
       ),
-      seller_amount: toNoirU256(params.sellerAmount),
+      seller_amount: await params.sellerAmount.toNoir(),
       seller_randomness: sellerRandomness,
 
       buyer_secret_key: params.buyerSecretKey,
@@ -83,7 +71,7 @@ export class LobService {
         params.buyerSecretKey,
         params.buyerNote,
       ),
-      buyer_amount: toNoirU256(params.buyerAmount),
+      buyer_amount: await params.buyerAmount.toNoir(),
       buyer_randomness: buyerRandomness,
     };
     const { proof } = await prove("swap", swapCircuit, input);

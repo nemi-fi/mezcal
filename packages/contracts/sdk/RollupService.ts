@@ -218,7 +218,7 @@ export class PoolErc20Service {
     secretKey: string;
     fromNote: Erc20Note;
     to: CompleteWaAddress;
-    amount: bigint;
+    amount: TokenAmount;
   }) {
     const { Fr } = await import("@aztec/aztec.js");
 
@@ -231,25 +231,19 @@ export class PoolErc20Service {
       from_note_inputs: await this.toNoteConsumptionInputs(secretKey, fromNote),
       from_secret_key: secretKey,
       to: { inner: to.address },
-      amount: toNoirU256(amount),
+      amount: await amount.toNoir(),
       to_randomness,
       change_randomness,
     };
     const changeNote = await Erc20Note.from({
       owner: fromNote.owner,
-      amount: await TokenAmount.from({
-        token: fromNote.amount.token,
-        amount: fromNote.amount.amount - amount,
-      }),
+      amount: fromNote.amount.sub(amount),
       randomness: change_randomness,
     });
     assert(changeNote.amount.amount >= 0n, "invalid change note");
     const toNote = await Erc20Note.from({
       owner: to,
-      amount: await TokenAmount.from({
-        token: fromNote.amount.token,
-        amount,
-      }),
+      amount,
       randomness: to_randomness,
     });
     // console.log("input\n", JSON.stringify(input));
@@ -497,6 +491,12 @@ export class TokenAmount {
       token: { inner: this.token },
       amount: toNoirU256(this.amount),
     };
+  }
+
+  sub(other: TokenAmount): TokenAmount {
+    const result = this.amount - other.amount;
+    assert(result >= 0n, "TokenAmount.sub: underflow");
+    return new TokenAmount(this.token, result);
   }
 }
 
