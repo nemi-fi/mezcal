@@ -4,13 +4,8 @@ pragma solidity ^0.8.23;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Fr, FrLib, keccak256ToFr} from "./Fr.sol";
-import {NoteInput, TokenAmount, Call, Execution, MAX_TOKENS_IN_PER_EXECUTION, MAX_TOKENS_OUT_PER_EXECUTION, PublicInputs, U256_LIMBS} from "./Utils.sol";
+import {IVerifier, NoteInput, TokenAmount, Call, Execution, MAX_TOKENS_IN_PER_EXECUTION, MAX_TOKENS_OUT_PER_EXECUTION, PublicInputs, U256_LIMBS} from "./Utils.sol";
 import {PoolGeneric} from "./PoolGeneric.sol";
-import {UltraVerifier as ShieldVerifier} from "../noir/target/erc20_shield.sol";
-import {UltraVerifier as UnshieldVerifier} from "../noir/target/erc20_unshield.sol";
-import {UltraVerifier as JoinVerifier} from "../noir/target/erc20_join.sol";
-import {UltraVerifier as TransferVerifier} from "../noir/target/erc20_transfer.sol";
-import {UltraVerifier as RollupVerifier} from "../noir/target/rollup.sol";
 
 // Note: keep in sync with other languages
 uint32 constant MAX_NOTES_TO_JOIN = 2;
@@ -21,18 +16,18 @@ contract PoolERC20 is PoolGeneric {
     using PublicInputs for PublicInputs.Type;
 
     struct PoolERC20Storage {
-        ShieldVerifier shieldVerifier;
-        UnshieldVerifier unshieldVerifier;
-        JoinVerifier joinVerifier;
-        TransferVerifier transferVerifier;
+        IVerifier shieldVerifier;
+        IVerifier unshieldVerifier;
+        IVerifier joinVerifier;
+        IVerifier transferVerifier;
     }
 
     constructor(
-        ShieldVerifier shieldVerifier,
-        UnshieldVerifier unshieldVerifier,
-        JoinVerifier joinVerifier,
-        TransferVerifier transferVerifier,
-        RollupVerifier rollupVerifier
+        IVerifier shieldVerifier,
+        IVerifier unshieldVerifier,
+        IVerifier joinVerifier,
+        IVerifier transferVerifier,
+        IVerifier rollupVerifier
     ) PoolGeneric(rollupVerifier) {
         _poolErc20Storage().shieldVerifier = shieldVerifier;
         _poolErc20Storage().unshieldVerifier = unshieldVerifier;

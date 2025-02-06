@@ -119,3 +119,10 @@ struct AppendOnlyTreeSnapshot {
     bytes32 root;
     uint32 nextAvailableLeafIndex;
 }
+
+interface IVerifier {
+    function verify(
+        bytes calldata proof,
+        bytes32[] calldata publicInputs
+    ) external view returns (bool);
+}

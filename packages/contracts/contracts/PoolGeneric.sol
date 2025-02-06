@@ -2,8 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {Fr, FrLib} from "./Fr.sol";
-import {NoteInput, PublicInputs, AppendOnlyTreeSnapshot} from "./Utils.sol";
-import {UltraVerifier as RollupVerifier} from "../noir/target/rollup.sol";
+import {IVerifier, NoteInput, PublicInputs, AppendOnlyTreeSnapshot} from "./Utils.sol";
 
 // Note: keep in sync with other languages
 uint32 constant MAX_NOTES_PER_ROLLUP = 64;
@@ -30,7 +29,7 @@ contract PoolGeneric {
     error TxAlreadyRolledUp(uint256 txIndex);
 
     struct PoolGenericStorage {
-        RollupVerifier rollupVerifier;
+        IVerifier rollupVerifier;
         PendingTx[] allPendingTxs;
         AppendOnlyTreeSnapshot noteHashTree;
         mapping(Fr => uint256) noteHashState; // TODO(perf): nuke this
@@ -57,7 +56,7 @@ contract PoolGeneric {
     );
     error NullifierExists(Fr nullifier);
 
-    constructor(RollupVerifier rollupVerifier_) {
+    constructor(IVerifier rollupVerifier_) {
         _poolGenericStorage().rollupVerifier = rollupVerifier_;
 
         _poolGenericStorage()
