@@ -44,12 +44,12 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "@aztec/aztec.js": "0.66.0",
-    "@aztec/bb.js": "0.66.0",
-    "@aztec/circuits.js": "0.66.0",
-    "@aztec/foundation": "0.66.0",
-    "@aztec/kv-store": "0.66.0",
-    "@aztec/merkle-tree": "0.66.0",
+    "@aztec/aztec.js": "0.67.0",
+    "@aztec/bb.js": "0.67.0",
+    "@aztec/circuits.js": "0.67.0",
+    "@aztec/foundation": "0.67.0",
+    "@aztec/kv-store": "0.67.0",
+    "@aztec/merkle-tree": "0.67.0",
     "@hpke/core": "^1.7.1",
     "@hpke/dhkem-x25519": "^1.6.1",
     "@noir-lang/noir_js": "1.0.0-beta.1",

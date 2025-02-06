@@ -17,7 +17,7 @@ const config: HardhatUserConfig = {
   },
   noir: {
     version: "1.0.0-beta.1",
-    bbVersion: "0.66.0",
+    bbVersion: "0.67.0",
   },
   networks: {},
   etherscan: {
