@@ -167,18 +167,12 @@ export class LobService {
       ...inputPublic,
     });
     const orderId = randomness; // TODO: is randomness a good order id?
-    const proofs = await Promise.all(
-      inputsShared.map(({ partyIndex, inputShared }) => {
-        return this.mpcProver.requestProveAsParty({
-          orderId,
-          inputShared,
-          partyIndex,
-          circuit: swapCircuit.circuit,
-          numPublicInputs: 8,
-          side,
-        });
-      }),
-    );
+    const proofs = await this.mpcProver.prove(inputsShared, {
+      orderId,
+      side,
+      circuit: swapCircuit.circuit,
+      numPublicInputs: 8,
+    });
     assert(uniq(proofs).length === 1, "proofs mismatch");
     const proof = proofs[0]!;
     return {
