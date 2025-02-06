@@ -59,10 +59,12 @@ export class LobService {
     const seller_order = {
       sell_amount: await params.sellerAmount.toNoir(),
       buy_amount: await params.buyerAmount.toNoir(),
+      randomness: sellerRandomness,
     };
     const buyer_order = {
       sell_amount: await params.buyerAmount.toNoir(),
       buy_amount: await params.sellerAmount.toNoir(),
+      randomness: buyerRandomness,
     };
 
     const input = {

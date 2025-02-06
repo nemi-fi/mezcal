@@ -50,4 +50,7 @@ mod LobRouter {
 pub struct Order {
     pub sell_amount: common::TokenAmount,
     pub buy_amount: common::TokenAmount,
+    /// Hide order contents from other parties and outside world
+    // TODO(perf): not sure if this is needed because orders are secret shared in an MPC network
+    pub randomness: Field,
 }
