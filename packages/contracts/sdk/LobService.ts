@@ -56,6 +56,15 @@ export class LobService {
       randomness: buyerRandomness,
     });
 
+    const seller_order = {
+      sell_amount: await params.sellerAmount.toNoir(),
+      buy_amount: await params.buyerAmount.toNoir(),
+    };
+    const buyer_order = {
+      sell_amount: await params.buyerAmount.toNoir(),
+      buy_amount: await params.sellerAmount.toNoir(),
+    };
+
     const input = {
       tree_roots: await this.trees.getTreeRoots(),
       seller_secret_key: params.sellerSecretKey,
@@ -63,7 +72,7 @@ export class LobService {
         params.sellerSecretKey,
         params.sellerNote,
       ),
-      seller_amount: await params.sellerAmount.toNoir(),
+      seller_order,
       seller_randomness: sellerRandomness,
 
       buyer_secret_key: params.buyerSecretKey,
@@ -71,7 +80,7 @@ export class LobService {
         params.buyerSecretKey,
         params.buyerNote,
       ),
-      buyer_amount: await params.buyerAmount.toNoir(),
+      buyer_order,
       buyer_randomness: buyerRandomness,
     };
     const { proof } = await prove("swap", swapCircuit, input);
