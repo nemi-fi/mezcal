@@ -78,3 +78,16 @@ export async function prove(
   proof = proof.slice(4); // remove length
   return { proof, witness, returnValue, publicInputs };
 }
+
+export function promiseWithResolvers<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (reason: unknown) => void;
+} {
+  const ret: any = {};
+  ret.promise = new Promise((resolve, reject) => {
+    ret.resolve = resolve;
+    ret.reject = reject;
+  });
+  return ret;
+}

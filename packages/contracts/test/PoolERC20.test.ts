@@ -408,4 +408,59 @@ describe("PoolERC20", () => {
     expect(await sdk.poolErc20.balanceOf(usdc, bobSecretKey)).to.equal(70n);
     expect(await sdk.poolErc20.balanceOf(btc, bobSecretKey)).to.equal(8n);
   });
+
+  it("swaps mpc", async () => {
+    const { note: aliceNote } = await sdk.poolErc20.shield({
+      account: alice,
+      token: usdc,
+      amount: 100n,
+      secretKey: aliceSecretKey,
+    });
+    const { note: bobNote } = await sdk.poolErc20.shield({
+      account: bob,
+      token: btc,
+      amount: 10n,
+      secretKey: bobSecretKey,
+    });
+
+    await backendSdk.rollup.rollup();
+
+    const sellerAmount = await TokenAmount.from({
+      token: await usdc.getAddress(),
+      amount: 70n,
+    });
+    const buyerAmount = await TokenAmount.from({
+      token: await btc.getAddress(),
+      amount: 2n,
+    });
+
+    const swapAlicePromise = sdk.lob.requestSwap({
+      secretKey: aliceSecretKey,
+      note: aliceNote,
+      sellAmount: sellerAmount,
+      buyAmount: buyerAmount,
+    });
+    const swapBobPromise = sdk.lob.requestSwap({
+      secretKey: bobSecretKey,
+      note: bobNote,
+      sellAmount: buyerAmount,
+      buyAmount: sellerAmount,
+    });
+    const [swapAlice, swapBob] = await Promise.all([
+      swapAlicePromise,
+      swapBobPromise,
+    ]);
+    const args =
+      swapAlice.side === "seller"
+        ? ([swapAlice, swapBob] as const)
+        : ([swapBob, swapAlice] as const);
+    await sdk.lob.commitSwap(...args);
+
+    await backendSdk.rollup.rollup();
+
+    expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(30n);
+    expect(await sdk.poolErc20.balanceOf(btc, aliceSecretKey)).to.equal(2n);
+    expect(await sdk.poolErc20.balanceOf(usdc, bobSecretKey)).to.equal(70n);
+    expect(await sdk.poolErc20.balanceOf(btc, bobSecretKey)).to.equal(8n);
+  });
 });

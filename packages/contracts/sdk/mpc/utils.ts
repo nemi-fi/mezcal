@@ -4,7 +4,11 @@ import { range } from "lodash";
 import fs from "node:fs";
 import path from "node:path";
 import toml from "smol-toml";
+import type { PartyIndex } from "./MpcNetworkService.js";
 
+/**
+ * @deprecated use {@link splitInput2} instead
+ */
 export async function splitInput(circuit: CompiledCircuit, input: InputMap) {
   return await inWorkingDir(async (workingDir) => {
     const proverPath = path.join(workingDir, "ProverX.toml");
@@ -19,6 +23,14 @@ export async function splitInput(circuit: CompiledCircuit, input: InputMap) {
     });
     return shared;
   });
+}
+
+export async function splitInput2(circuit: CompiledCircuit, input: InputMap) {
+  const shared = await splitInput(circuit, input);
+  return Array.from(shared.entries()).map(([partyIndex, inputShared]) => ({
+    partyIndex: partyIndex as PartyIndex,
+    inputShared,
+  }));
 }
 
 export async function inWorkingDir<T>(f: (workingDir: string) => Promise<T>) {
