@@ -28,6 +28,7 @@ describe("PoolERC20", () => {
   let sdk: ReturnType<typeof interfaceSdk.createInterfaceSdk>;
   let backendSdk: ReturnType<typeof createBackendSdk>;
   let CompleteWaAddress: typeof import("../sdk").sdk.CompleteWaAddress;
+  let TokenAmount: typeof import("../sdk").sdk.TokenAmount;
   snapshottedBeforeEach(async () => {
     [alice, bob, charlie] = await ethers.getSigners();
     await typedDeployments.fixture();
@@ -42,8 +43,9 @@ describe("PoolERC20", () => {
     await usdc.mintForTests(alice, await parseUnits(usdc, "1000000"));
     await usdc.connect(alice).approve(pool, ethers.MaxUint256);
 
-    CompleteWaAddress = (await tsImport("../sdk", __filename)).sdk
-      .CompleteWaAddress;
+    ({ CompleteWaAddress, TokenAmount } = (
+      await tsImport("../sdk", __filename)
+    ).sdk);
   });
 
   before(async () => {
@@ -203,7 +205,10 @@ describe("PoolERC20", () => {
 
     // interact
     const [note] = await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey);
-    const transferAmount = 123n;
+    const transferAmount = await TokenAmount.from({
+      token: await usdc.getAddress(),
+      amount: 123n,
+    });
     const { nullifier, changeNote, toNote } = await sdk.poolErc20.transfer({
       secretKey: aliceSecretKey,
       fromNote: note,
@@ -230,10 +235,10 @@ describe("PoolERC20", () => {
     await backendSdk.rollup.rollup();
 
     expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(
-      amount - transferAmount,
+      amount - transferAmount.amount,
     );
     expect(await sdk.poolErc20.balanceOf(usdc, bobSecretKey)).to.equal(
-      transferAmount,
+      transferAmount.amount,
     );
   });
 
@@ -254,7 +259,10 @@ describe("PoolERC20", () => {
       secretKey: aliceSecretKey,
       fromNote: shieldedNote,
       to: await CompleteWaAddress.fromSecretKey(bobSecretKey),
-      amount: 30n,
+      amount: await TokenAmount.from({
+        token: await usdc.getAddress(),
+        amount: 30n,
+      }),
     });
     // TODO: split notes even if they are not rolled up
     // const {  } = await sdk.poolErc20.transfer({
@@ -270,7 +278,10 @@ describe("PoolERC20", () => {
       secretKey: bobSecretKey,
       fromNote: bobNote,
       to: await CompleteWaAddress.fromSecretKey(charlieSecretKey),
-      amount: 10n,
+      amount: await TokenAmount.from({
+        token: await usdc.getAddress(),
+        amount: 10n,
+      }),
     });
     await backendSdk.rollup.rollup();
 
@@ -284,11 +295,14 @@ describe("PoolERC20", () => {
   });
 
   it("can't double spend a note", async () => {
-    const amount = 100n;
+    const amount = await TokenAmount.from({
+      token: await usdc.getAddress(),
+      amount: 100n,
+    });
     await sdk.poolErc20.shield({
       account: alice,
       token: usdc,
-      amount,
+      amount: amount.amount,
       secretKey: aliceSecretKey,
     });
     await backendSdk.rollup.rollup();
@@ -338,7 +352,10 @@ describe("PoolERC20", () => {
       secretKey: aliceSecretKey,
       fromNote: note,
       to: await CompleteWaAddress.fromSecretKey(bobSecretKey),
-      amount: 100n,
+      amount: await TokenAmount.from({
+        token: await usdc.getAddress(),
+        amount: 100n,
+      }),
     });
     expect(
       await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey),
