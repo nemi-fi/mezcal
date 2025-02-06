@@ -20,3 +20,7 @@ node_modules
 .DS_Store
 
 Prover.toml
+
+data
+configs
+bn254_g*.dat
