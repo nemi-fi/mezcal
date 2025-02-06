@@ -95,6 +95,7 @@ export class LobService {
       input0,
       input1,
       inputPublic,
+      numPublicInputs: 8,
     });
     const noteInputs: [
       NoteInputStruct,

@@ -1,4 +1,5 @@
 import type { CompiledCircuit, InputMap } from "@noir-lang/noir_js";
+import { ethers } from "ethers";
 import fs from "node:fs";
 import path from "node:path";
 import toml from "smol-toml";
@@ -10,6 +11,8 @@ export class MpcProverService {
     input0: InputMap;
     input1: InputMap;
     inputPublic: InputMap;
+    // TODO: infer number of public inputs
+    numPublicInputs: number;
   }) {
     const id = crypto.randomUUID();
     const workingDir = path.join(__dirname, "work-dirs", id);
@@ -42,9 +45,18 @@ export class MpcProverService {
             ),
           ),
         );
-      const proofData = fs.readFileSync(path.join(workingDir, "proof.0.proof"));
-      // TODO: decode proofData
-      const proof = proofData;
+      const proofData = Uint8Array.from(
+        fs.readFileSync(path.join(workingDir, "proof.0.proof")),
+      );
+      // arcane magic
+      const proof = ethers.getBytes(
+        ethers.concat([
+          proofData.slice(0, 2),
+          proofData.slice(6, 100),
+          proofData.slice(100 + params.numPublicInputs * 32),
+        ]),
+      );
+      // console.log("proof native\n", JSON.stringify(Array.from(proof)));
       return { proof, publicInputs };
     } finally {
       fs.rmSync(workingDir, { recursive: true });
