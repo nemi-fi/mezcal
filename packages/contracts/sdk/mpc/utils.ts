@@ -28,7 +28,7 @@ export async function inWorkingDir<T>(f: (workingDir: string) => Promise<T>) {
   try {
     return await f(workingDir);
   } finally {
-    // fs.rmSync(workingDir, { recursive: true });
+    fs.rmSync(workingDir, { recursive: true });
   }
 }
 
