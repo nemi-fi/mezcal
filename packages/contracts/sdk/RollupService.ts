@@ -1,5 +1,5 @@
 import type { Fr } from "@aztec/aztec.js";
-import type { UltraPlonkBackend } from "@aztec/bb.js";
+import type { UltraHonkBackend } from "@aztec/bb.js";
 import type { Noir } from "@noir-lang/noir_js";
 import { utils } from "@repo/utils";
 import { ethers } from "ethers";
@@ -530,7 +530,7 @@ export class CompleteWaAddress {
 
 export type NoirAndBackend = {
   noir: Noir;
-  backend: UltraPlonkBackend;
+  backend: UltraHonkBackend;
 };
 
 export async function poseidon2Hash(inputs: (bigint | string | number)[]) {
