@@ -50,9 +50,9 @@ export type CompiledCircuit = {
 
 async function getCircuit(artifact: AsyncOrSync<CompiledCircuit>) {
   const { Noir } = await import("@noir-lang/noir_js");
-  const { UltraPlonkBackend } = await import("@aztec/bb.js");
+  const { UltraHonkBackend } = await import("@aztec/bb.js");
   artifact = await artifact;
   const noir = new Noir(artifact);
-  const backend = new UltraPlonkBackend(artifact.bytecode);
+  const backend = new UltraHonkBackend(artifact.bytecode);
   return { noir, backend };
 }

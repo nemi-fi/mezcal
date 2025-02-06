@@ -18,7 +18,7 @@ const deploy: DeployFunction = async ({
       from: deployer,
       log: true,
       args: [],
-      contract: `noir/target/${circuitName}.sol:UltraVerifier`,
+      contract: `noir/target/${circuitName}.sol:HonkVerifier`,
     });
   }
   const shieldVerifier = await deployVerifier(

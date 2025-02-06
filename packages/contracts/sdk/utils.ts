@@ -70,7 +70,8 @@ export async function prove(
 ) {
   console.time(`${name} generateProof`);
   const { witness } = await noir.execute(input);
-  const { proof } = await backend.generateProof(witness);
+  let { proof } = await backend.generateProof(witness, { keccak: true });
   console.timeEnd(`${name} generateProof`);
+  proof = proof.slice(4); // remove length
   return { proof };
 }
