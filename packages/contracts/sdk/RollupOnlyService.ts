@@ -13,6 +13,7 @@ import {
   type NoirAndBackend,
 } from "./RollupService";
 import type { TreesService } from "./TreesService";
+import { prove } from "./utils.js";
 
 export class RollupService {
   constructor(
@@ -84,10 +85,7 @@ export class RollupService {
     };
     // console.log("rollup input\n", JSON.stringify(input));
     const rollupCircuit = await this.circuits.rollup;
-    console.time("rollup generateProof");
-    const { witness } = await rollupCircuit.noir.execute(input);
-    const { proof } = await rollupCircuit.backend.generateProof(witness);
-    console.timeEnd("rollup generateProof");
+    const { proof } = await prove("rollup", rollupCircuit, input);
 
     const tx = await this.contract.rollup(
       proof,

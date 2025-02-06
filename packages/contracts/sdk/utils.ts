@@ -1,6 +1,8 @@
 import type { Fr } from "@aztec/aztec.js";
+import type { InputMap } from "@noir-lang/noir_js";
 import { ethers } from "ethers";
 import { assert } from "ts-essentials";
+import type { NoirAndBackend } from "./sdk.js";
 
 export function printPublicInputs(publicInputs: string[]) {
   console.log("publicInputs js", publicInputs.length);
@@ -59,4 +61,16 @@ export function fromNoirU256(value: { limbs: (bigint | string)[] }) {
     value.limbs.map((x) => BigInt(x)),
     120,
   );
+}
+
+export async function prove(
+  name: string,
+  { noir, backend }: NoirAndBackend,
+  input: InputMap,
+) {
+  console.time(`${name} generateProof`);
+  const { witness } = await noir.execute(input);
+  const { proof } = await backend.generateProof(witness);
+  console.timeEnd(`${name} generateProof`);
+  return { proof };
 }

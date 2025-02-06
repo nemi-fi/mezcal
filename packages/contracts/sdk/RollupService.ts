@@ -8,7 +8,7 @@ import { assert, type AsyncOrSync } from "ts-essentials";
 import { type PoolERC20 } from "../typechain-types";
 import { EncryptionService } from "./EncryptionService";
 import type { ITreesService } from "./RemoteTreesService";
-import { fromNoirU256, toNoirU256, U256_LIMBS } from "./utils";
+import { fromNoirU256, prove, toNoirU256, U256_LIMBS } from "./utils.js";
 
 // Note: keep in sync with other languages
 export const NOTE_HASH_TREE_HEIGHT = 40;
@@ -71,7 +71,6 @@ export class PoolErc20Service {
   }) {
     const { Fr } = await import("@aztec/aztec.js");
     const randomness = Fr.random().toString();
-    console.time("shield generateProof");
     const note = await Erc20Note.from({
       owner: await CompleteWaAddress.fromSecretKey(secretKey),
       amount: await TokenAmount.from({
@@ -82,15 +81,14 @@ export class PoolErc20Service {
     });
     const noteInput = await this.toNoteInput(note);
     const shieldCircuit = (await this.circuits).shield;
-    const { witness } = await shieldCircuit.noir.execute({
+    const input = {
       tree_roots: await this.trees.getTreeRoots(),
       owner: { inner: note.owner.address },
       amount: await note.amount.toNoir(),
       randomness: note.randomness,
       note_hash: noteInput.noteHash,
-    });
-    const { proof } = await shieldCircuit.backend.generateProof(witness);
-    console.timeEnd("shield generateProof");
+    };
+    const { proof } = await prove("shield", shieldCircuit, input);
     const tx = await this.contract
       .connect(account)
       .shield(proof, token, amount, noteInput);
@@ -129,8 +127,7 @@ export class PoolErc20Service {
     const nullifier = await fromNote.computeNullifier(secretKey);
 
     const unshieldCircuit = (await this.circuits).unshield;
-    console.time("unshield generateProof");
-    const { witness } = await unshieldCircuit.noir.execute({
+    const input = {
       tree_roots: await this.trees.getTreeRoots(),
       from_secret_key: secretKey,
       from_note_inputs: await this.toNoteConsumptionInputs(secretKey, fromNote),
@@ -145,9 +142,8 @@ export class PoolErc20Service {
       // return
       nullifier: nullifier.toString(),
       change_note_hash: await changeNote.hash(),
-    });
-    const { proof } = await unshieldCircuit.backend.generateProof(witness);
-    console.timeEnd("unshield generateProof");
+    };
+    const { proof } = await prove("unshield", unshieldCircuit, input);
     const tx = await this.contract.unshield(
       proof,
       token,
@@ -180,8 +176,7 @@ export class PoolErc20Service {
     ).address.toString();
 
     const joinCircuit = (await this.circuits).join;
-    console.time("join generateProof");
-    const { witness } = await joinCircuit.noir.execute({
+    const input = {
       tree_roots: await this.trees.getTreeRoots(),
       from_secret_key: secretKey,
       join_randomness,
@@ -189,9 +184,8 @@ export class PoolErc20Service {
       notes: await Promise.all(
         notes.map((note) => this.toNoteConsumptionInputs(secretKey, note)),
       ),
-    });
-    const { proof } = await joinCircuit.backend.generateProof(witness);
-    console.timeEnd("join generateProof");
+    };
+    const { proof } = await prove("join", joinCircuit, input);
 
     const joinNote = await Erc20Note.from({
       owner: await CompleteWaAddress.fromSecretKey(secretKey),
@@ -260,10 +254,7 @@ export class PoolErc20Service {
     });
     // console.log("input\n", JSON.stringify(input));
     const transferCircuit = (await this.circuits).transfer;
-    console.time("transfer generateProof");
-    const { witness } = await transferCircuit.noir.execute(input);
-    const { proof } = await transferCircuit.backend.generateProof(witness);
-    console.timeEnd("transfer generateProof");
+    const { proof } = await prove("transfer", transferCircuit, input);
 
     const tx = await this.contract.transfer(
       proof,
