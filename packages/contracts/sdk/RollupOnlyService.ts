@@ -128,7 +128,7 @@ export class RollupService {
       ) {
         break;
       }
-      // this is O(N^2), refactor
+      // TODO(perf): this is O(N^2), refactor
       batch = {
         txIndices: [...batch.txIndices, i],
         noteHashes: [...batch.noteHashes, ...tx.noteHashes],
