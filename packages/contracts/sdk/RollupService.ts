@@ -306,11 +306,11 @@ export class PoolErc20Service {
     };
   }
 
+  /**
+   * @deprecated use {@link Erc20Note.toSolidityNoteInput} instead
+   */
   async toNoteInput(note: Erc20Note) {
-    return {
-      noteHash: await note.hash(),
-      encryptedNote: await note.encrypt(),
-    };
+    return await note.toSolidityNoteInput();
   }
 
   private async getEmittedNotes(secretKey: string) {
@@ -381,6 +381,13 @@ export class Erc20Note {
     };
   }
 
+  async toSolidityNoteInput() {
+    return {
+      noteHash: await this.hash(),
+      encryptedNote: await this.encrypt(),
+    };
+  }
+
   async serialize(): Promise<bigint[]> {
     const amount = await this.amount.toNoir();
     return [
@@ -409,7 +416,7 @@ export class Erc20Note {
     });
   }
 
-  async hash() {
+  async hash(): Promise<string> {
     return (await poseidon2Hash(await this.serialize())).toString();
   }
 
