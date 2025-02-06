@@ -8,7 +8,7 @@ import { assert, type AsyncOrSync } from "ts-essentials";
 import { type PoolERC20 } from "../typechain-types";
 import { EncryptionService } from "./EncryptionService";
 import type { ITreesService } from "./RemoteTreesService";
-import { fromNoirU256, prove, toNoirU256, U256_LIMBS } from "./utils.js";
+import { prove, toNoirU256 } from "./utils.js";
 
 // Note: keep in sync with other languages
 export const NOTE_HASH_TREE_HEIGHT = 40;
@@ -393,7 +393,8 @@ export class Erc20Note {
     return [
       BigInt(this.owner.address),
       BigInt(this.amount.token),
-      ...amount.amount.limbs.map((x) => BigInt(x)),
+      // ...amount.amount.limbs.map((x) => BigInt(x)),
+      BigInt(amount.amount.value),
       BigInt(this.randomness),
     ];
   }
@@ -410,9 +411,10 @@ export class Erc20Note {
       ),
       amount: await TokenAmount.from({
         token: ethers.zeroPadValue(fieldsStr[1]!, 20),
-        amount: fromNoirU256({ limbs: fields.slice(2, 2 + U256_LIMBS) }),
+        // amount: fromNoirU256({ limbs: fields.slice(2, 2 + U256_LIMBS) }),
+        amount: ethers.toBigInt(fieldsStr[2]!),
       }),
-      randomness: ethers.zeroPadValue(fieldsStr[2 + U256_LIMBS]!, 32),
+      randomness: ethers.zeroPadValue(fieldsStr[3]!, 32),
     });
   }
 

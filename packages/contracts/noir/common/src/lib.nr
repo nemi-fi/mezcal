@@ -1,7 +1,7 @@
-use bignum::{BigNum, fields::U256::U256Params};
 use protocol_types::hash::poseidon2_hash_with_separator;
 
 mod context;
+mod uint252;
 mod erc20_note;
 mod note;
 mod owned_note;
@@ -45,7 +45,7 @@ pub global GENERATOR_INDEX__NOTE_NULLIFIER: Field = 2;
 // Note: keep in sync with other languages
 pub global U256_LIMBS: u32 = 3;
 
-pub type U256 = BigNum<U256_LIMBS, 257, U256Params>;
+pub type U256 = uint252::U252;
 
 /// Walmart Aztec address
 #[derive(Eq, Serialize)]
@@ -73,7 +73,7 @@ pub struct TokenAmount {
 
 impl TokenAmount {
     pub fn zero(token: crate::EthAddress) -> Self {
-        Self { token, amount: U256::new() }
+        Self { token, amount: U256::zero() }
     }
 
     fn _check(self, other: Self) {
