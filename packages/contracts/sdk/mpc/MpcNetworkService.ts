@@ -70,7 +70,6 @@ class MpcProverPartyService {
 
   async #tryExecuteOrder(
     orderId: OrderId,
-
     params: {
       circuit: CompiledCircuit;
       numPublicInputs: number;
@@ -110,6 +109,8 @@ class MpcProverPartyService {
       const proofHex = ethers.hexlify(proof);
       order.result.resolve(proofHex);
       otherOrder.result.resolve(proofHex);
+      this.#storage.delete(order.id);
+      this.#storage.delete(otherOrder.id);
     } catch (error) {
       order.result.reject(error);
       otherOrder.result.reject(error);
