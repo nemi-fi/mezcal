@@ -100,8 +100,9 @@ class MpcProverPartyService {
       omit(otherOrder, ["inputShared", "result"]),
     );
     try {
-      const { proof } = await this.#prove({
+      const { proof } = await proveAsParty({
         circuit: params.circuit,
+        partyIndex: this.partyIndex,
         input0Shared: inputsShared[0],
         input1Shared: inputsShared[1],
         numPublicInputs: params.numPublicInputs,
@@ -116,65 +117,63 @@ class MpcProverPartyService {
       otherOrder.result.reject(error);
     }
   }
+}
 
-  async #prove(params: {
-    circuit: CompiledCircuit;
-    input0Shared: string;
-    input1Shared: string;
-    // TODO: infer number of public inputs
-    numPublicInputs: number;
-  }) {
-    console.log("proving as party", this.partyIndex);
-    return await inWorkingDir(async (workingDir) => {
-      for (const [traderIndex, inputShared] of [
-        params.input0Shared,
-        params.input1Shared,
-      ].entries()) {
-        fs.writeFileSync(
-          path.join(
-            workingDir,
-            `Prover${traderIndex}.toml.${this.partyIndex}.shared`,
-          ),
-          ethers.getBytes(inputShared),
-        );
-      }
-
-      const circuitPath = path.join(workingDir, "circuit.json");
-      fs.writeFileSync(circuitPath, JSON.stringify(params.circuit));
-
-      const runCommand = makeRunCommand(__dirname);
-      await runCommand(
-        `./run-party.sh ${workingDir} ${circuitPath} ${this.partyIndex}`,
+async function proveAsParty(params: {
+  partyIndex: number;
+  circuit: CompiledCircuit;
+  input0Shared: string;
+  input1Shared: string;
+  // TODO: infer number of public inputs
+  numPublicInputs: number;
+}) {
+  console.log("proving as party", params.partyIndex);
+  return await inWorkingDir(async (workingDir) => {
+    for (const [traderIndex, inputShared] of [
+      params.input0Shared,
+      params.input1Shared,
+    ].entries()) {
+      fs.writeFileSync(
+        path.join(
+          workingDir,
+          `Prover${traderIndex}.toml.${params.partyIndex}.shared`,
+        ),
+        ethers.getBytes(inputShared),
       );
+    }
 
-      const publicInputs = z
-        .string()
-        .array()
-        .parse(
-          JSON.parse(
-            fs.readFileSync(
-              path.join(workingDir, "public_input.json"),
-              "utf-8",
-            ),
-          ),
-        );
-      const proofData = Uint8Array.from(
-        fs.readFileSync(
-          path.join(workingDir, `proof.${this.partyIndex}.proof`),
+    const circuitPath = path.join(workingDir, "circuit.json");
+    fs.writeFileSync(circuitPath, JSON.stringify(params.circuit));
+
+    const runCommand = makeRunCommand(__dirname);
+    await runCommand(
+      `./run-party.sh ${workingDir} ${circuitPath} ${params.partyIndex}`,
+    );
+
+    const publicInputs = z
+      .string()
+      .array()
+      .parse(
+        JSON.parse(
+          fs.readFileSync(path.join(workingDir, "public_input.json"), "utf-8"),
         ),
       );
-      // arcane magic
-      const proof = ethers.getBytes(
-        ethers.concat([
-          proofData.slice(0, 2),
-          proofData.slice(6, 100),
-          proofData.slice(100 + params.numPublicInputs * 32),
-        ]),
-      );
-      // console.log("proof native\n", JSON.stringify(Array.from(proof)));
-      return { proof, publicInputs };
-    });
-  }
+    const proofData = Uint8Array.from(
+      fs.readFileSync(
+        path.join(workingDir, `proof.${params.partyIndex}.proof`),
+      ),
+    );
+    // arcane magic
+    const proof = ethers.getBytes(
+      ethers.concat([
+        proofData.slice(0, 2),
+        proofData.slice(6, 100),
+        proofData.slice(100 + params.numPublicInputs * 32),
+      ]),
+    );
+    // console.log("proof native\n", JSON.stringify(Array.from(proof)));
+    return { proof, publicInputs };
+  });
 }
 
 export type OrderId = string & { __brand: "OrderId" };
