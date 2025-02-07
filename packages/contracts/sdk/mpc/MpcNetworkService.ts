@@ -22,8 +22,6 @@ export class MpcProverService {
       orderId: OrderId;
       side: Side;
       circuit: CompiledCircuit;
-      // TODO: infer number of public inputs
-      numPublicInputs: number;
     },
   ) {
     return await Promise.all(
@@ -47,8 +45,6 @@ class MpcProverPartyService {
     side: Side;
     inputShared: string;
     circuit: CompiledCircuit;
-    // TODO: infer number of public inputs
-    numPublicInputs: number;
   }) {
     // TODO(security): authorization
     if (this.#storage.has(params.orderId)) {
@@ -64,7 +60,6 @@ class MpcProverPartyService {
 
     this.#tryExecuteOrder(params.orderId, {
       circuit: params.circuit,
-      numPublicInputs: params.numPublicInputs,
     });
 
     return await order.result.promise;
@@ -74,7 +69,6 @@ class MpcProverPartyService {
     orderId: OrderId,
     params: {
       circuit: CompiledCircuit;
-      numPublicInputs: number;
     },
   ) {
     const order = this.#storage.get(orderId);
@@ -107,7 +101,6 @@ class MpcProverPartyService {
         partyIndex: this.partyIndex,
         input0Shared: inputsShared[0],
         input1Shared: inputsShared[1],
-        numPublicInputs: params.numPublicInputs,
       });
       const proofHex = ethers.hexlify(proof);
       order.result.resolve(proofHex);
@@ -126,8 +119,6 @@ async function proveAsParty(params: {
   circuit: CompiledCircuit;
   input0Shared: string;
   input1Shared: string;
-  // TODO: infer number of public inputs
-  numPublicInputs: number;
 }) {
   console.log("proving as party", params.partyIndex);
   return await inWorkingDir(async (workingDir) => {
@@ -170,7 +161,7 @@ async function proveAsParty(params: {
       ethers.concat([
         proofData.slice(0, 2),
         proofData.slice(6, 100),
-        proofData.slice(100 + params.numPublicInputs * 32),
+        proofData.slice(100 + publicInputs.length * 32),
       ]),
     );
 

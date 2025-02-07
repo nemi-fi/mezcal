@@ -171,7 +171,6 @@ export class LobService {
       orderId,
       side,
       circuit: swapCircuit.circuit,
-      numPublicInputs: 8,
     });
     assert(uniq(proofs).length === 1, "proofs mismatch");
     const proof = proofs[0]!;
