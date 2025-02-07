@@ -469,4 +469,54 @@ describe("PoolERC20", () => {
     expect(await sdk.poolErc20.balanceOf(usdc, bobSecretKey)).to.equal(70n);
     expect(await sdk.poolErc20.balanceOf(btc, bobSecretKey)).to.equal(8n);
   });
+
+  it("fails to swap if order amounts do not match", async () => {
+    if (process.env.CI) {
+      // TODO: install co-noir on github actions and remove this
+      return;
+    }
+
+    const { note: aliceNote } = await sdk.poolErc20.shield({
+      account: alice,
+      token: usdc,
+      amount: 100n,
+      secretKey: aliceSecretKey,
+    });
+    const { note: bobNote } = await sdk.poolErc20.shield({
+      account: bob,
+      token: btc,
+      amount: 10n,
+      secretKey: bobSecretKey,
+    });
+
+    await backendSdk.rollup.rollup();
+
+    const sellerAmount = await TokenAmount.from({
+      token: await usdc.getAddress(),
+      amount: 70n,
+    });
+    const buyerAmount = await TokenAmount.from({
+      token: await btc.getAddress(),
+      amount: 2n,
+    });
+
+    const swapAlicePromise = sdk.lob.requestSwap({
+      secretKey: aliceSecretKey,
+      note: aliceNote,
+      sellAmount: sellerAmount,
+      buyAmount: buyerAmount,
+    });
+    const swapBobPromise = sdk.lob.requestSwap({
+      secretKey: bobSecretKey,
+      note: bobNote,
+      sellAmount: buyerAmount,
+      buyAmount: await TokenAmount.from({
+        token: await usdc.getAddress(),
+        amount: 71n, // amount differs
+      }),
+    });
+    await expect(
+      Promise.all([swapAlicePromise, swapBobPromise]),
+    ).to.be.rejectedWith("mpc generated invalid proof");
+  });
 });
