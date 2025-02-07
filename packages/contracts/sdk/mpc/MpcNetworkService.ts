@@ -1,7 +1,9 @@
+import { UltraHonkBackend } from "@aztec/bb.js";
 import type { CompiledCircuit } from "@noir-lang/noir_js";
 import { ethers } from "ethers";
 import { omit } from "lodash";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { z } from "zod";
 import { promiseWithResolvers } from "../utils.js";
@@ -171,6 +173,38 @@ async function proveAsParty(params: {
         proofData.slice(100 + params.numPublicInputs * 32),
       ]),
     );
+
+    // pre-verify proof
+    const backend = new UltraHonkBackend(params.circuit.bytecode, {
+      threads: os.cpus().length,
+    });
+    let verified: boolean;
+    try {
+      verified = await backend.verifyProof(
+        {
+          // prepend length as 4 bytes
+          proof: ethers.getBytes(
+            ethers.concat([
+              ethers.zeroPadValue(ethers.toBeArray(proof.length), 4),
+              proof,
+            ]),
+          ),
+          publicInputs,
+        },
+        { keccak: true },
+      );
+    } catch (e: any) {
+      if (e.message?.includes("unreachable")) {
+        throw new Error("mpc generated invalid proof: failed in runtime");
+      }
+      throw e;
+    } finally {
+      await backend.destroy();
+    }
+    if (!verified) {
+      throw new Error("mpc generated invalid proof: returned false");
+    }
+
     // console.log("proof native\n", JSON.stringify(Array.from(proof)));
     return { proof, publicInputs };
   });
