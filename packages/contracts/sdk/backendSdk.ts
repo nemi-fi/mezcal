@@ -1,5 +1,6 @@
-import type { UltraHonkBackend } from "@aztec/bb.js";
+import { UltraHonkBackend } from "@aztec/bb.js";
 import { utils } from "@repo/utils";
+import os from "node:os";
 import type { AsyncOrSync } from "ts-essentials";
 import { NativeUltraHonkBackend } from "./NativeUltraHonkBackend";
 import { RollupService } from "./RollupOnlyService";
@@ -14,11 +15,14 @@ export function createBackendSdk(
   const rollup = new RollupService(coreSdk.contract, trees, {
     rollup: utils.iife(async () => {
       const { Noir } = await import("@noir-lang/noir_js");
-      const noir = new Noir(await compiledCircuits.rollup);
-      const backend = new NativeUltraHonkBackend(
-        `${process.env.HOME}/.bb/bb`,
-        await compiledCircuits.rollup,
-      ) as unknown as UltraHonkBackend;
+      const circuit = await compiledCircuits.rollup;
+      const noir = new Noir(circuit);
+      const backend = process.env.CI
+        ? new UltraHonkBackend(circuit.bytecode, { threads: os.cpus().length })
+        : (new NativeUltraHonkBackend(
+            `${process.env.HOME}/.bb/bb`,
+            circuit,
+          ) as unknown as UltraHonkBackend);
       return { noir, backend };
     }),
   });
