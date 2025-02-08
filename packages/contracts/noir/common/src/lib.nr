@@ -41,6 +41,8 @@ pub global MAX_TOKENS_OUT_PER_EXECUTION: u32 = 4;
 pub global GENERATOR_INDEX__WA_ADDRESS: Field = 1;
 // Note: keep in sync with other languages
 pub global GENERATOR_INDEX__NOTE_NULLIFIER: Field = 2;
+// Note: keep in sync with other languages
+pub global GENERATOR_INDEX__NOTE_HASH: Field = 3;
 
 // Note: keep in sync with other languages
 pub global U256_LIMBS: u32 = 3;

@@ -1,3 +1,5 @@
+use protocol_types::hash::poseidon2_hash_with_separator;
+
 // fails to compile if this file is moved to erc20 crate
 
 pub struct Erc20Note {
@@ -42,8 +44,7 @@ impl crate::Serialize<6> for Erc20Note {
 impl crate::Note for Erc20Note {
     fn hash(self) -> Field {
         let serialized = self.serialize();
-        // TODO(security): use poseidon2_hash_with_separator
-        std::hash::poseidon2::Poseidon2::hash(serialized, serialized.len())
+        poseidon2_hash_with_separator(serialized, crate::GENERATOR_INDEX__NOTE_HASH)
     }
 }
 
