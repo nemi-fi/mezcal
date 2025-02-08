@@ -5,8 +5,7 @@ import { omit } from "lodash";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { z } from "zod";
-import { promiseWithResolvers } from "../utils.js";
+import { decodeNativeHonkProof, promiseWithResolvers } from "../utils.js";
 import { inWorkingDir, makeRunCommand, splitInput } from "./utils.js";
 
 export class MpcProverService {
@@ -143,26 +142,10 @@ async function proveAsParty(params: {
       `./run-party.sh ${workingDir} ${circuitPath} ${params.partyIndex}`,
     );
 
-    const publicInputs = z
-      .string()
-      .array()
-      .parse(
-        JSON.parse(
-          fs.readFileSync(path.join(workingDir, "public_input.json"), "utf-8"),
-        ),
-      );
-    const proofData = Uint8Array.from(
+    const { proof, publicInputs } = decodeNativeHonkProof(
       fs.readFileSync(
         path.join(workingDir, `proof.${params.partyIndex}.proof`),
       ),
-    );
-    // arcane magic
-    const proof = ethers.getBytes(
-      ethers.concat([
-        proofData.slice(0, 2),
-        proofData.slice(6, 100),
-        proofData.slice(100 + publicInputs.length * 32),
-      ]),
     );
 
     // pre-verify proof
@@ -172,16 +155,7 @@ async function proveAsParty(params: {
     let verified: boolean;
     try {
       verified = await backend.verifyProof(
-        {
-          // prepend length as 4 bytes
-          proof: ethers.getBytes(
-            ethers.concat([
-              ethers.zeroPadValue(ethers.toBeArray(proof.length), 4),
-              proof,
-            ]),
-          ),
-          publicInputs,
-        },
+        { proof, publicInputs },
         { keccak: true },
       );
     } catch (e: any) {
@@ -196,8 +170,10 @@ async function proveAsParty(params: {
       throw new Error("mpc generated invalid proof: returned false");
     }
 
-    // console.log("proof native\n", JSON.stringify(Array.from(proof)));
-    return { proof, publicInputs };
+    return {
+      proof: proof.slice(4), // remove length
+      publicInputs,
+    };
   });
 }
 

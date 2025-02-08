@@ -1,4 +1,5 @@
 import type { Fr } from "@aztec/aztec.js";
+import { splitHonkProof } from "@aztec/bb.js";
 import type { InputMap } from "@noir-lang/noir_js";
 import { ethers } from "ethers";
 import { assert } from "ts-essentials";
@@ -90,4 +91,23 @@ export function promiseWithResolvers<T>(): {
     ret.reject = reject;
   });
   return ret;
+}
+
+export function decodeNativeHonkProof(nativeProof: Uint8Array) {
+  const { proof, publicInputs: publicInputsRaw } = splitHonkProof(nativeProof);
+  const publicInputs = deflattenFields(publicInputsRaw);
+  return { proof, publicInputs };
+}
+
+// TODO: import from @aztec/bb.js when available
+function deflattenFields(flattenedFields: Uint8Array): string[] {
+  const publicInputSize = 32;
+  const chunkedFlattenedPublicInputs: Uint8Array[] = [];
+
+  for (let i = 0; i < flattenedFields.length; i += publicInputSize) {
+    const publicInput = flattenedFields.slice(i, i + publicInputSize);
+    chunkedFlattenedPublicInputs.push(publicInput);
+  }
+
+  return chunkedFlattenedPublicInputs.map((x) => ethers.hexlify(x));
 }
