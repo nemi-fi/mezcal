@@ -118,6 +118,15 @@ export class LobService {
     sellAmount: TokenAmount;
     buyAmount: TokenAmount;
   }) {
+    const orderId = await getRandomness();
+    console.log(
+      "order ID",
+      orderId,
+      params.sellAmount.amount,
+      "->",
+      params.buyAmount.amount,
+    );
+
     const swapCircuit = (await this.circuits).swap;
     const randomness = await getRandomness();
 
@@ -153,7 +162,6 @@ export class LobService {
       [`${side}_order`]: order,
       [`${side}_randomness`]: randomness,
     };
-    console.log("side", side, randomness);
     // only one trading party need to provide public inputs
     const inputPublic =
       side === "seller"
@@ -166,7 +174,6 @@ export class LobService {
       ...input,
       ...inputPublic,
     });
-    const orderId = randomness; // TODO: is randomness a good order id?
     const proofs = await this.mpcProver.prove(inputsShared, {
       orderId,
       side,
@@ -175,6 +182,7 @@ export class LobService {
     assert(uniq(proofs).length === 1, "proofs mismatch");
     const proof = proofs[0]!;
     return {
+      orderId,
       proof,
       side,
       changeNote: await changeNote.toSolidityNoteInput(),
@@ -185,10 +193,20 @@ export class LobService {
     };
   }
 
-  async commitSwap(sellerSwap: SwapResult, buyerSwap: SwapResult) {
+  async commitSwap(params: { swapA: SwapResult; swapB: SwapResult }) {
+    const [sellerSwap, buyerSwap] =
+      params.swapA.side === "seller"
+        ? [params.swapA, params.swapB]
+        : [params.swapB, params.swapA];
+
+    assert(
+      sellerSwap.orderId !== buyerSwap.orderId,
+      "order ids must be different",
+    ); // sanity check
+
     assert(
       sellerSwap.proof === buyerSwap.proof,
-      "seller & buyer proof mismatch",
+      `seller & buyer proof mismatch: ${sellerSwap.orderId} ${buyerSwap.orderId}`,
     );
     const proof = sellerSwap.proof;
 
@@ -207,4 +225,4 @@ export class LobService {
   }
 }
 
-type SwapResult = Awaited<ReturnType<LobService["requestSwap"]>>;
+export type SwapResult = Awaited<ReturnType<LobService["requestSwap"]>>;

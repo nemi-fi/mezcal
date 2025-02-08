@@ -1,10 +1,11 @@
 import { UltraHonkBackend } from "@aztec/bb.js";
 import type { CompiledCircuit } from "@noir-lang/noir_js";
+import { utils } from "@repo/utils";
 import { ethers } from "ethers";
-import { omit } from "lodash";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import PQueue, { type QueueAddOptions } from "p-queue";
 import { decodeNativeHonkProof, promiseWithResolvers } from "../utils.js";
 import { inWorkingDir, makeRunCommand, splitInput } from "./utils.js";
 
@@ -36,6 +37,7 @@ export class MpcProverService {
 
 class MpcProverPartyService {
   #storage: Map<OrderId, Order> = new Map();
+  #queue = new PQueue({ concurrency: 1 });
 
   constructor(readonly partyIndex: PartyIndex) {}
 
@@ -57,59 +59,75 @@ class MpcProverPartyService {
     };
     this.#storage.set(params.orderId, order);
 
-    this.#tryExecuteOrder(params.orderId, {
-      circuit: params.circuit,
-    });
+    // add this order to other order's queue
+    // TODO(perf): this is O(N^2) but we should do better
+    for (const otherOrder of this.#storage.values()) {
+      this.#addOrdersToQueue({
+        orderAId: order.id,
+        orderBId: otherOrder.id,
+        circuit: params.circuit,
+      });
+    }
 
     return await order.result.promise;
   }
 
-  async #tryExecuteOrder(
-    orderId: OrderId,
-    params: {
-      circuit: CompiledCircuit;
-    },
-  ) {
-    const order = this.#storage.get(orderId);
-    if (!order) {
-      throw new Error(
-        `order not found in party storage ${this.partyIndex}: ${orderId}`,
-      );
-    }
+  #addOrdersToQueue(params: {
+    orderAId: OrderId;
+    orderBId: OrderId;
+    circuit: CompiledCircuit;
+  }) {
+    const options: QueueAddOptions = {
+      throwOnTimeout: true,
+      // this is a hack to enforce the order of execution matches across all MPC parties
+      priority: Number(
+        ethers.getBigInt(
+          ethers.id([params.orderAId, params.orderBId].sort().join("")),
+        ) % BigInt(Number.MAX_SAFE_INTEGER),
+      ),
+    };
+    this.#queue.add(async () => {
+      await utils.sleep(500); // just to make sure all parties got the order over network
+      const orderA = this.#storage.get(params.orderAId);
+      const orderB = this.#storage.get(params.orderBId);
+      if (!orderA || !orderB) {
+        // one of the orders was already matched
+        return;
+      }
+      if (orderA.id === orderB.id) {
+        // can't match with itself
+        return;
+      }
+      if (orderA.side === orderB.side) {
+        // pre-check that orders are on opposite sides
+        return;
+      }
 
-    const otherOrders = Array.from(this.#storage.values()).filter(
-      (o) => o.id !== order.id && o.side !== order.side,
-    );
-    if (otherOrders.length === 0) {
-      return;
-    }
-    const otherOrder = otherOrders[0]!;
-    const inputsShared =
-      order.side === "seller"
-        ? ([order.inputShared, otherOrder.inputShared] as const)
-        : ([otherOrder.inputShared, order.inputShared] as const);
-    console.log(
-      "executing orders",
-      this.partyIndex,
-      omit(order, ["inputShared", "result"]),
-      omit(otherOrder, ["inputShared", "result"]),
-    );
-    try {
-      const { proof } = await proveAsParty({
-        circuit: params.circuit,
-        partyIndex: this.partyIndex,
-        input0Shared: inputsShared[0],
-        input1Shared: inputsShared[1],
-      });
-      const proofHex = ethers.hexlify(proof);
-      order.result.resolve(proofHex);
-      otherOrder.result.resolve(proofHex);
-      this.#storage.delete(order.id);
-      this.#storage.delete(otherOrder.id);
-    } catch (error) {
-      order.result.reject(error);
-      otherOrder.result.reject(error);
-    }
+      // deterministic ordering
+      const [order0, order1] =
+        orderA.side === "seller" ? [orderA, orderB] : [orderB, orderA];
+      console.log("executing orders", this.partyIndex, order0.id, order1.id);
+      try {
+        const { proof } = await proveAsParty({
+          circuit: params.circuit,
+          partyIndex: this.partyIndex,
+          input0Shared: order0.inputShared,
+          input1Shared: order1.inputShared,
+        });
+        const proofHex = ethers.hexlify(proof);
+        order0.result.resolve(proofHex);
+        order1.result.resolve(proofHex);
+        this.#storage.delete(order0.id);
+        this.#storage.delete(order1.id);
+        console.log(
+          `orders matched: ${this.partyIndex} ${order0.id} ${order1.id}`,
+        );
+      } catch (error) {
+        console.log(
+          `orders did not match: ${this.partyIndex} ${order0.id} ${order1.id}`,
+        );
+      }
+    }, options);
   }
 }
 
@@ -119,7 +137,6 @@ async function proveAsParty(params: {
   input0Shared: string;
   input1Shared: string;
 }) {
-  console.log("proving as party", params.partyIndex);
   return await inWorkingDir(async (workingDir) => {
     for (const [traderIndex, inputShared] of [
       params.input0Shared,
