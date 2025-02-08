@@ -200,6 +200,11 @@ export class LobService {
         : [params.swapB, params.swapA];
 
     assert(
+      sellerSwap.orderId !== buyerSwap.orderId,
+      "order ids must be different",
+    ); // sanity check
+
+    assert(
       sellerSwap.proof === buyerSwap.proof,
       `seller & buyer proof mismatch: ${sellerSwap.orderId} ${buyerSwap.orderId}`,
     );
