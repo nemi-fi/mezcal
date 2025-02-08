@@ -30,7 +30,7 @@ export class TreesService {
       };
     });
 
-  // TODO(privacy): this reveals link between noteHash and nullifier to the backend. Can we move this to frontend or put backend inside a TEE?
+  // TODO(security): this reveals link between noteHash and nullifier to the backend. Can we move this to frontend or put backend inside a TEE?
   getNoteConsumptionInputs = z
     .function()
     .args(z.object({ noteHash: z.string(), nullifier: z.string() }))
@@ -59,6 +59,32 @@ export class TreesService {
         nullifier_low_leaf_membership_witness:
           nullifierNmWitness.low_leaf_membership_witness,
       };
+    });
+
+  // TODO(security): this reveals link between noteHash and nullifier to the backend. Can we move this to frontend or put backend inside a TEE?
+  noteExistsAndNotNullified = z
+    .function()
+    .args(z.object({ noteHash: z.string(), nullifier: z.string() }))
+    .returns(z.promise(z.boolean()))
+    .implement(async ({ noteHash, nullifier }) => {
+      const { Fr } = await import("@aztec/aztec.js");
+      const { noteHashTree, nullifierTree } = await this.getTrees();
+      const noteHashIndex = await noteHashTree.findLeafIndex(
+        new Fr(BigInt(noteHash)),
+        INCLUDE_UNCOMMITTED,
+      );
+      if (noteHashIndex == null) {
+        // note does not exist
+        return false;
+      }
+      const nullifierIndex = await nullifierTree.findLeafIndex(
+        new Fr(BigInt(nullifier)),
+      );
+      if (nullifierIndex != null) {
+        // note is nullified
+        return false;
+      }
+      return true;
     });
 
   async getTrees() {

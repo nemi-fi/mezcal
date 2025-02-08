@@ -34,13 +34,6 @@ export const MAX_TOKENS_IN_PER_EXECUTION = 4;
 export const MAX_TOKENS_OUT_PER_EXECUTION = 4;
 
 // Note: keep in sync with other languages
-export const NOTE_HASH_OR_NULLIFIER_STATE_NOT_EXISTS = 0n;
-// Note: keep in sync with other languages
-export const NOTE_HASH_OR_NULLIFIER_STATE_PENDING = 1n;
-// Note: keep in sync with other languages
-const NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP = 2n;
-
-// Note: keep in sync with other languages
 const MAX_NOTES_TO_JOIN = 2;
 
 export const INCLUDE_UNCOMMITTED = true;
@@ -319,19 +312,11 @@ export class PoolErc20Service {
         return undefined;
       }
 
-      const noteHashRolledUp: boolean =
-        (await this.contract.noteHashState(await note.hash())) ===
-        NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP;
-      if (!noteHashRolledUp) {
-        return undefined;
-      }
-
-      // if nullified
-      const nullifier = (await note.computeNullifier(secretKey)).toString();
-      const nullifierExists =
-        (await this.contract.nullifierState(nullifier)) ===
-        NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP;
-      if (nullifierExists) {
+      const noteValid: boolean = await this.trees.noteExistsAndNotNullified({
+        noteHash: await note.hash(),
+        nullifier: (await note.computeNullifier(secretKey)).toString(),
+      });
+      if (!noteValid) {
         return undefined;
       }
 

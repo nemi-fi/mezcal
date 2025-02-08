@@ -48,6 +48,7 @@ contract PoolERC20 is PoolGeneric {
         pi.push(getNullifierTree().root);
         pi.push(address(token));
         pi.pushUint256Limbs(amount);
+        // TODO(security): ensure noteHash does not already exist in the noteHashTree. If it exists, the tx will never be rolled up and the money will be lost.
         pi.push(note.noteHash);
         require(
             _poolErc20Storage().shieldVerifier.verify(proof, pi.finish()),
@@ -70,6 +71,9 @@ contract PoolERC20 is PoolGeneric {
         bytes32 nullifier,
         NoteInput calldata changeNote
     ) external {
+        // TODO(security): bring back unshield. It was removed because nullifiers are no longer checked on tx level. Only when the tx is rolled up.
+        require(false, "not implemented");
+
         PublicInputs.Type memory pi = PublicInputs.create(6 + U256_LIMBS);
         // params
         pi.push(getNoteHashTree().root);

@@ -315,14 +315,17 @@ describe("PoolERC20", () => {
       amount: amount,
     });
 
-    await expect(
-      sdk.poolErc20.transfer({
-        secretKey: aliceSecretKey,
-        fromNote: note,
-        to: await CompleteWaAddress.fromSecretKey(charlieSecretKey),
-        amount: amount,
-      }),
-    ).to.be.revertedWithCustomError(pool, "NullifierExists");
+    await sdk.poolErc20.transfer({
+      secretKey: aliceSecretKey,
+      fromNote: note,
+      to: await CompleteWaAddress.fromSecretKey(charlieSecretKey),
+      amount: amount,
+    });
+    // TODO(security): check that this fails on proof verification level. I.e., try to insert the same nullifier twice.
+    // TODO(security): also check that the nullifier cannot be set in the place of the low leaf(i get this impression from reading `merkle_tree::indexed_tree::batch_insert` code)
+    await expect(backendSdk.rollup.rollup()).to.be.rejectedWith(
+      "Cannot insert duplicated keys",
+    );
   });
 
   // TODO(security): write these tests

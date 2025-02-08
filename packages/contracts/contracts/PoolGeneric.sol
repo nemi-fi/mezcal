@@ -9,15 +9,9 @@ uint32 constant MAX_NOTES_PER_ROLLUP = 64;
 // Note: keep in sync with other languages
 uint32 constant MAX_NULLIFIERS_PER_ROLLUP = 64;
 
-// Note: keep in sync with other languages
-uint256 constant NOTE_HASH_OR_NULLIFIER_STATE_NOT_EXISTS = 0;
-// Note: keep in sync with other languages
-uint256 constant NOTE_HASH_OR_NULLIFIER_STATE_PENDING = 1;
-// Note: keep in sync with other languages
-uint256 constant NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP = 2;
-
 struct PendingTx {
     bool rolledUp;
+    // TODO(perf): store a hash of the noteHashes and nullifiers and check when rolling up
     Fr[] noteHashes;
     Fr[] nullifiers;
 }
@@ -32,10 +26,8 @@ contract PoolGeneric {
         IVerifier rollupVerifier;
         PendingTx[] allPendingTxs;
         AppendOnlyTreeSnapshot noteHashTree;
-        mapping(Fr => uint256) noteHashState; // TODO(perf): nuke this
         uint256 noteHashBatchIndex;
         AppendOnlyTreeSnapshot nullifierTree;
-        mapping(Fr => uint256) nullifierState; // TODO(perf): nuke this
         uint256 nullifierBatchIndex;
     }
 
@@ -47,14 +39,12 @@ contract PoolGeneric {
         uint256 indexed index,
         Fr[MAX_NOTES_PER_ROLLUP] noteHashes
     );
-    error NoteHashExists(Fr noteHash);
 
     // TODO(perf): use dynamic array to save on gas costs
     event Nullifiers(
         uint256 indexed index,
         Fr[MAX_NULLIFIERS_PER_ROLLUP] nullifiers
     );
-    error NullifierExists(Fr nullifier);
 
     constructor(IVerifier rollupVerifier_) {
         _poolGenericStorage().rollupVerifier = rollupVerifier_;
@@ -147,20 +137,12 @@ contract PoolGeneric {
         );
         _poolGenericStorage().noteHashTree = newNoteHashTree;
         _poolGenericStorage().nullifierTree = newNullifierTree;
-        // TODO(perf): remove this disgusting gas waste
-        for (uint256 i = 0; i < pendingNoteHashes.length; i++) {
-            _poolGenericStorage().noteHashState[
-                    pendingNoteHashes[i]
-                ] = NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP;
-        }
-        // TODO(perf): remove this disgusting gas waste
-        for (uint256 i = 0; i < pendingNullifiers.length; i++) {
-            _poolGenericStorage().nullifierState[
-                    pendingNullifiers[i]
-                ] = NOTE_HASH_OR_NULLIFIER_STATE_ROLLED_UP;
-        }
     }
 
+    /**
+     * @dev REQUIREMENT: noteHashes do not exist in the noteHashTree and nullifiers do not exist in the nullifierTree.
+     * If they do, the tx will never be rolled up.
+     */
     function _PoolGeneric_addPendingTx(
         NoteInput[] memory noteInputs,
         bytes32[] memory nullifiers
@@ -178,28 +160,12 @@ contract PoolGeneric {
 
         for (uint256 i = 0; i < noteInputs.length; i++) {
             Fr noteHash = FrLib.tryFrom(noteInputs[i].noteHash);
-            require(
-                _poolGenericStorage().noteHashState[noteHash] ==
-                    NOTE_HASH_OR_NULLIFIER_STATE_NOT_EXISTS,
-                NoteHashExists(noteHash)
-            );
-            _poolGenericStorage().noteHashState[
-                    noteHash
-                ] = NOTE_HASH_OR_NULLIFIER_STATE_PENDING;
             // TODO(perf): this is a waste of gas
             pendingTx.noteHashes.push(noteHash);
         }
 
         for (uint256 i = 0; i < nullifiers.length; i++) {
             Fr nullifier = FrLib.tryFrom(nullifiers[i]);
-            require(
-                _poolGenericStorage().nullifierState[nullifier] ==
-                    NOTE_HASH_OR_NULLIFIER_STATE_NOT_EXISTS,
-                NullifierExists(nullifier)
-            );
-            _poolGenericStorage().nullifierState[
-                    nullifier
-                ] = NOTE_HASH_OR_NULLIFIER_STATE_PENDING;
             // TODO(perf): this is a waste of gas
             pendingTx.nullifiers.push(nullifier);
         }
@@ -225,14 +191,6 @@ contract PoolGeneric {
         returns (AppendOnlyTreeSnapshot memory)
     {
         return _poolGenericStorage().nullifierTree;
-    }
-
-    function noteHashState(bytes32 noteHash) external view returns (uint256) {
-        return _poolGenericStorage().noteHashState[FrLib.tryFrom(noteHash)];
-    }
-
-    function nullifierState(bytes32 nullifier) external view returns (uint256) {
-        return _poolGenericStorage().nullifierState[FrLib.tryFrom(nullifier)];
     }
 
     function _poolGenericStorage()

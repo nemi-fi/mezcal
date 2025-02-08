@@ -98,6 +98,10 @@ export class NonMembershipTree {
     };
     return witness;
   }
+
+  async findLeafIndex(key: Fr) {
+    return await this._tree.findLeafIndex(key.toBuffer(), INCLUDE_UNCOMMITTED);
+  }
 }
 
 export interface NonMembershipWitness
