@@ -12,6 +12,9 @@ fn main(
 ) -> pub common::Result<1, 1> {
     let mut context = common::Context::from(tree_roots);
 
+    // disabled because nullifiers are no longer checked on tx level
+    panic(f"not implemented");
+
     erc20::Token::burn(
         &mut context,
         from_secret_key,

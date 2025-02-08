@@ -2,6 +2,7 @@
   import { lib } from "$lib";
   import { requestRollup } from "$lib/utils";
   import { sdk } from "@repo/contracts/sdk";
+  import { TokenAmount } from "@repo/contracts/sdk/RollupService";
   import { Ui } from "@repo/ui";
   import { utils } from "@repo/utils";
   import { assert } from "ts-essentials";
@@ -38,7 +39,10 @@
       secretKey,
       fromNote: note,
       to,
-      amount: BigInt(amount.quotient.toString()),
+      amount: await TokenAmount.from({
+        token: amount.currency.address,
+        amount: BigInt(amount.quotient.toString()),
+      }),
     });
     await requestRollup();
   }

@@ -5,7 +5,8 @@ import type { TreesService } from "./TreesService";
 export const REMOTE_TREES_ALLOWED_METHODS = [
   "getTreeRoots",
   "getNoteConsumptionInputs",
-] as const;
+  "noteExistsAndNotNullified",
+] satisfies (keyof TreesService)[];
 export type ITreesService = Pick<
   TreesService,
   ElementOf<typeof REMOTE_TREES_ALLOWED_METHODS>

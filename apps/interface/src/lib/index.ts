@@ -38,10 +38,10 @@ const contract = PoolERC20__factory.connect(
 const coreSdk = sdk.createCoreSdk(contract);
 const trees = new sdk.RemoteTreesService(route("POST /api/trees"));
 const interfaceSdk = sdk.createInterfaceSdk(coreSdk, trees, {
-  shield: import("@repo/contracts/noir/target/shield.json"),
-  unshield: import("@repo/contracts/noir/target/unshield.json"),
-  join: import("@repo/contracts/noir/target/join.json"),
-  transfer: import("@repo/contracts/noir/target/transfer.json"),
+  shield: import("@repo/contracts/noir/target/erc20_shield.json"),
+  unshield: import("@repo/contracts/noir/target/erc20_unshield.json"),
+  join: import("@repo/contracts/noir/target/erc20_join.json"),
+  transfer: import("@repo/contracts/noir/target/erc20_transfer.json"),
 });
 const reown = new ReownService(contract);
 const evm = new EvmAccountService();

@@ -1,9 +1,11 @@
+import type { ProofData } from "@aztec/bb.js";
 import type { CompiledCircuit } from "@noir-lang/noir_js";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { decodeNativeHonkProof } from "./utils.js";
 
-export class NativeUltraPlonkBackend {
+export class NativeUltraHonkBackend {
   constructor(
     readonly bbPath: string,
     readonly circuit: CompiledCircuit,
@@ -30,7 +32,7 @@ export class NativeUltraPlonkBackend {
     fs.writeFileSync(circuitJsonPath, JSON.stringify(this.circuit));
     fs.writeFileSync(witnessOutputPath, witness);
     const args = [
-      "prove", // ultraplonk
+      "prove_ultra_keccak_honk",
       "-b",
       circuitJsonPath,
       "-w",
@@ -48,15 +50,17 @@ export class NativeUltraPlonkBackend {
       console.error(`stderr: ${data}`);
     });
 
-    return await new Promise<{ proof: Uint8Array }>((resolve, reject) => {
+    return await new Promise<ProofData>((resolve, reject) => {
       bbProcess.on("close", (code: number) => {
         if (code !== 0) {
           reject(new Error(`Process exited with code ${code}`));
           return;
         }
 
-        const proof = fs.readFileSync(proofOutputPath);
-        resolve(splitUltraPlonkProof(proof));
+        const proofData = decodeNativeHonkProof(
+          fs.readFileSync(proofOutputPath),
+        );
+        resolve(proofData);
       });
 
       bbProcess.on("error", (err) => {
@@ -88,37 +92,4 @@ export class NativeUltraPlonkBackend {
     fs.mkdirSync(targetDir, { recursive: true });
     return targetDir;
   }
-}
-
-async function splitUltraPlonkProof(proofData: Uint8Array) {
-  const proof = proofData.slice(-2144);
-  const publicInputsFlat = proofData.slice(0, proofData.length - 2144);
-  const publicInputs = deflattenFields(publicInputsFlat);
-  return { proof, publicInputs };
-}
-
-export function deflattenFields(flattenedFields: Uint8Array): string[] {
-  const publicInputSize = 32;
-  const chunkedFlattenedPublicInputs: Uint8Array[] = [];
-
-  for (let i = 0; i < flattenedFields.length; i += publicInputSize) {
-    const publicInput = flattenedFields.slice(i, i + publicInputSize);
-    chunkedFlattenedPublicInputs.push(publicInput);
-  }
-
-  return chunkedFlattenedPublicInputs.map(uint8ArrayToHex);
-}
-
-function uint8ArrayToHex(buffer: Uint8Array): string {
-  const hex: string[] = [];
-
-  buffer.forEach(function (i) {
-    let h = i.toString(16);
-    if (h.length % 2) {
-      h = "0" + h;
-    }
-    hex.push(h);
-  });
-
-  return "0x" + hex.join("");
 }

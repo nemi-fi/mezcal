@@ -38,13 +38,6 @@ where
             context.tree_roots().note_hash_root,
         );
         let nullifier = compute_nullifier_of_owned_note(self.note, secret_key);
-        // TODO(perf): optimize consume by checking nullifiers only during rollup
-        merkle_tree::assert_check_non_membership(
-            nullifier,
-            self.nullifier_low_leaf_preimage,
-            self.nullifier_low_leaf_membership_witness,
-            context.tree_roots().nullifier_root,
-        );
         context.push_nullifier(nullifier);
     }
 }

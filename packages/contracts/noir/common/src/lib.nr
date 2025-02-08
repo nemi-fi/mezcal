@@ -104,5 +104,4 @@ impl std::cmp::Ord for TokenAmount {
 
 pub struct TreeRoots {
     pub note_hash_root: Field,
-    pub nullifier_root: Field,
 }
