@@ -109,8 +109,13 @@ class MpcProverPartyService {
         otherOrder.result.resolve(proofHex);
         this.#storage.delete(order.id);
         this.#storage.delete(otherOrder.id);
+        console.log(
+          `orders matched: ${this.partyIndex} ${order.id} ${otherOrder.id}`,
+        );
       } catch (error) {
-        console.error(`orders did not match: ${order.id}, ${otherOrder.id}`);
+        console.log(
+          `orders did not match: ${this.partyIndex} ${order.id} ${otherOrder.id}`,
+        );
       }
     }, options);
   }
