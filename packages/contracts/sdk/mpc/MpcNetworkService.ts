@@ -5,6 +5,7 @@ import { omit } from "lodash";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import PQueue, { type QueueAddOptions } from "p-queue";
 import { decodeNativeHonkProof, promiseWithResolvers } from "../utils.js";
 import { inWorkingDir, makeRunCommand, splitInput } from "./utils.js";
 
@@ -36,6 +37,7 @@ export class MpcProverService {
 
 class MpcProverPartyService {
   #storage: Map<OrderId, Order> = new Map();
+  #queue = new PQueue({ concurrency: 1 });
 
   constructor(readonly partyIndex: PartyIndex) {}
 
@@ -57,59 +59,62 @@ class MpcProverPartyService {
     };
     this.#storage.set(params.orderId, order);
 
-    this.#tryExecuteOrder(params.orderId, {
-      circuit: params.circuit,
-    });
+    // add this order to other order's queue
+    // TODO(perf): this is O(N^2) but we should do better
+    for (const otherOrder of this.#storage.values()) {
+      this.#addOrdersToQueue({
+        orderA: order,
+        orderB: otherOrder,
+        circuit: params.circuit,
+      });
+    }
 
     return await order.result.promise;
   }
 
-  async #tryExecuteOrder(
-    orderId: OrderId,
-    params: {
-      circuit: CompiledCircuit;
-    },
-  ) {
-    const order = this.#storage.get(orderId);
-    if (!order) {
-      throw new Error(
-        `order not found in party storage ${this.partyIndex}: ${orderId}`,
-      );
-    }
-
-    const otherOrders = Array.from(this.#storage.values()).filter(
-      (o) => o.id !== order.id && o.side !== order.side,
-    );
-    if (otherOrders.length === 0) {
+  #addOrdersToQueue(params: {
+    orderA: Order;
+    orderB: Order;
+    circuit: CompiledCircuit;
+  }) {
+    if (params.orderA.id === params.orderB.id) {
+      // can't match with itself
       return;
     }
-    const otherOrder = otherOrders[0]!;
-    const inputsShared =
-      order.side === "seller"
-        ? ([order.inputShared, otherOrder.inputShared] as const)
-        : ([otherOrder.inputShared, order.inputShared] as const);
-    console.log(
-      "executing orders",
-      this.partyIndex,
-      omit(order, ["inputShared", "result"]),
-      omit(otherOrder, ["inputShared", "result"]),
-    );
-    try {
-      const { proof } = await proveAsParty({
-        circuit: params.circuit,
-        partyIndex: this.partyIndex,
-        input0Shared: inputsShared[0],
-        input1Shared: inputsShared[1],
-      });
-      const proofHex = ethers.hexlify(proof);
-      order.result.resolve(proofHex);
-      otherOrder.result.resolve(proofHex);
-      this.#storage.delete(order.id);
-      this.#storage.delete(otherOrder.id);
-    } catch (error) {
-      order.result.reject(error);
-      otherOrder.result.reject(error);
+    if (params.orderA.side === params.orderB.side) {
+      // pre-check that orders are on opposite sides
+      return;
     }
+
+    const options: QueueAddOptions = { throwOnTimeout: true };
+    this.#queue.add(async () => {
+      const [order, otherOrder] =
+        params.orderA.side === "seller"
+          ? [params.orderA, params.orderB]
+          : [params.orderB, params.orderA];
+      console.log(
+        "executing orders",
+        this.partyIndex,
+        omit(order, ["inputShared", "result"]),
+        omit(otherOrder, ["inputShared", "result"]),
+      );
+      try {
+        const { proof } = await proveAsParty({
+          circuit: params.circuit,
+          partyIndex: this.partyIndex,
+          input0Shared: order.inputShared,
+          input1Shared: otherOrder.inputShared,
+        });
+        const proofHex = ethers.hexlify(proof);
+        order.result.resolve(proofHex);
+        otherOrder.result.resolve(proofHex);
+        this.#storage.delete(order.id);
+        this.#storage.delete(otherOrder.id);
+      } catch (error) {
+        order.result.reject(error);
+        otherOrder.result.reject(error);
+      }
+    }, options);
   }
 }
 
