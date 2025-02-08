@@ -111,8 +111,7 @@ class MpcProverPartyService {
         this.#storage.delete(order.id);
         this.#storage.delete(otherOrder.id);
       } catch (error) {
-        order.result.reject(error);
-        otherOrder.result.reject(error);
+        console.error(`orders did not match: ${order.id}, ${otherOrder.id}`);
       }
     }, options);
   }
