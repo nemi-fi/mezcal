@@ -11,7 +11,6 @@ import {
   MAX_NULLIFIERS_PER_ROLLUP,
   NOTE_HASH_TREE_HEIGHT,
   NULLIFIER_TREE_HEIGHT,
-  poseidon2Hash,
 } from "./RollupService";
 
 export class TreesService {
@@ -22,6 +21,7 @@ export class TreesService {
     .args()
     .implement(async () => {
       const { noteHashTree, nullifierTree } = await this.getTrees();
+      // console.log("nullifier_tree_root", nullifierTree.getRoot());
       return {
         note_hash_root: ethers.hexlify(
           noteHashTree.getRoot(INCLUDE_UNCOMMITTED),
@@ -116,15 +116,10 @@ export class TreesService {
       await this.contract.queryFilter(this.contract.filters.Nullifiers()),
     ).map((x) => x.nullifiers.map((n) => new Fr(BigInt(n))));
 
-    const initialNullifiersSeed = new Fr(
-      0x08a1735994d16db43c2373d0258b8f4d82ae162c297687bba68aa8a3912b042dn,
-    );
-    // TODO(security): sometimes tests fail with error "Empty low leaf". This is probably related how the nullifier tree is set up. I guess adding `1` in the nullifier tree should resolve the issue as the it's impossible to get an actual nullifier to be 1.
-    const initialNullifiers = await Promise.all(
-      // sub 1 because the tree has a 0 leaf already
-      times(MAX_NULLIFIERS_PER_ROLLUP - 1, (i) =>
-        poseidon2Hash([initialNullifiersSeed.toString(), i]),
-      ),
+    // add 1 to the nullifier tree, so it's possible to add new nullifiers to it(adding requires a non-zero low leaf)
+    const initialNullifiers = [new Fr(1)].concat(
+      // sub 2 because `0` and `1` are the first 2 leaves
+      times(MAX_NULLIFIERS_PER_ROLLUP - 2, () => new Fr(0)),
     );
     const allNullifiers = initialNullifiers.concat(nullifiers.flat());
     const nullifierTree = await NonMembershipTree.new(
