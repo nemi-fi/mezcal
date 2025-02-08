@@ -1,5 +1,6 @@
 import { UltraHonkBackend } from "@aztec/bb.js";
 import type { CompiledCircuit } from "@noir-lang/noir_js";
+import { utils } from "@repo/utils";
 import { ethers } from "ethers";
 import fs from "node:fs";
 import os from "node:os";
@@ -86,6 +87,7 @@ class MpcProverPartyService {
       ),
     };
     this.#queue.add(async () => {
+      await utils.sleep(500); // just to make sure all parties got the order over network
       const orderA = this.#storage.get(params.orderAId);
       const orderB = this.#storage.get(params.orderBId);
       if (!orderA || !orderB) {
