@@ -63,8 +63,8 @@ class MpcProverPartyService {
     // TODO(perf): this is O(N^2) but we should do better
     for (const otherOrder of this.#storage.values()) {
       this.#addOrdersToQueue({
-        orderA: order,
-        orderB: otherOrder,
+        orderAId: order.id,
+        orderBId: otherOrder.id,
         circuit: params.circuit,
       });
     }
@@ -73,25 +73,29 @@ class MpcProverPartyService {
   }
 
   #addOrdersToQueue(params: {
-    orderA: Order;
-    orderB: Order;
+    orderAId: OrderId;
+    orderBId: OrderId;
     circuit: CompiledCircuit;
   }) {
-    if (params.orderA.id === params.orderB.id) {
-      // can't match with itself
-      return;
-    }
-    if (params.orderA.side === params.orderB.side) {
-      // pre-check that orders are on opposite sides
-      return;
-    }
-
     const options: QueueAddOptions = { throwOnTimeout: true };
     this.#queue.add(async () => {
+      const orderA = this.#storage.get(params.orderAId);
+      const orderB = this.#storage.get(params.orderBId);
+      if (!orderA || !orderB) {
+        // one of the orders was already matched
+        return;
+      }
+      if (orderA.id === orderB.id) {
+        // can't match with itself
+        return;
+      }
+      if (orderA.side === orderB.side) {
+        // pre-check that orders are on opposite sides
+        return;
+      }
+
       const [order, otherOrder] =
-        params.orderA.side === "seller"
-          ? [params.orderA, params.orderB]
-          : [params.orderB, params.orderA];
+        orderA.side === "seller" ? [orderA, orderB] : [orderB, orderA];
       console.log(
         "executing orders",
         this.partyIndex,
