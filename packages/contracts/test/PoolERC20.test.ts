@@ -460,11 +460,7 @@ describe("PoolERC20", () => {
       swapAlicePromise,
       swapBobPromise,
     ]);
-    const args =
-      swapAlice.side === "seller"
-        ? ([swapAlice, swapBob] as const)
-        : ([swapBob, swapAlice] as const);
-    await sdk.lob.commitSwap(...args);
+    await sdk.lob.commitSwap({ swapA: swapAlice, swapB: swapBob });
 
     await backendSdk.rollup.rollup();
 

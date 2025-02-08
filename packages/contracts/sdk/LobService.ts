@@ -185,7 +185,12 @@ export class LobService {
     };
   }
 
-  async commitSwap(sellerSwap: SwapResult, buyerSwap: SwapResult) {
+  async commitSwap(params: { swapA: SwapResult; swapB: SwapResult }) {
+    const [sellerSwap, buyerSwap] =
+      params.swapA.side === "seller"
+        ? [params.swapA, params.swapB]
+        : [params.swapB, params.swapA];
+
     assert(
       sellerSwap.proof === buyerSwap.proof,
       "seller & buyer proof mismatch",
