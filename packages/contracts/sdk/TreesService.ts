@@ -94,6 +94,7 @@ export class TreesService {
     const initialNullifiersSeed = new Fr(
       0x08a1735994d16db43c2373d0258b8f4d82ae162c297687bba68aa8a3912b042dn,
     );
+    // TODO(security): sometimes tests fail with error "Empty low leaf". This is probably related how the nullifier tree is set up. I guess adding `1` in the nullifier tree should resolve the issue as the it's impossible to get an actual nullifier to be 1.
     const initialNullifiers = await Promise.all(
       // sub 1 because the tree has a 0 leaf already
       times(MAX_NULLIFIERS_PER_ROLLUP - 1, (i) =>
