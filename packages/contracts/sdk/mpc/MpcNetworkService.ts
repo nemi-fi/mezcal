@@ -138,9 +138,11 @@ async function proveAsParty(params: {
     fs.writeFileSync(circuitPath, JSON.stringify(params.circuit));
 
     const runCommand = makeRunCommand(__dirname);
-    await runCommand(
-      `./run-party.sh ${workingDir} ${circuitPath} ${params.partyIndex}`,
-    );
+    await runCommand("./run-party.sh", [
+      workingDir,
+      circuitPath,
+      params.partyIndex,
+    ]);
 
     const { proof, publicInputs } = decodeNativeHonkProof(
       fs.readFileSync(

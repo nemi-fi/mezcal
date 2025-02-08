@@ -13,7 +13,7 @@ export async function splitInput(circuit: CompiledCircuit, input: InputMap) {
     const circuitPath = path.join(workingDir, "circuit.json");
     fs.writeFileSync(circuitPath, JSON.stringify(circuit));
     const runCommand = makeRunCommand(__dirname);
-    await runCommand(`./split-inputs.sh ${proverPath} ${circuitPath}`);
+    await runCommand("./split-inputs.sh", [proverPath, circuitPath]);
     const shared = range(3).map((i) => {
       const x = Uint8Array.from(fs.readFileSync(`${proverPath}.${i}.shared`));
       return ethers.hexlify(x);
@@ -36,25 +36,42 @@ export async function inWorkingDir<T>(f: (workingDir: string) => Promise<T>) {
   }
 }
 
-export const makeRunCommand = (cwd?: string) => async (command: string) => {
-  const { exec } = await import("child_process");
-  const { promisify } = await import("util");
-  const execAsync = promisify(exec);
-  // TODO(security): escape command arguments (use spawn)
-  try {
-    const { stdout, stderr } = await execAsync(command, {
-      cwd,
-      maxBuffer: Infinity,
+export const makeRunCommand =
+  (cwd?: string) =>
+  async (command: string, args: (string | number)[] = []) => {
+    const { spawn } = await import("node:child_process");
+
+    const spawned = spawn(
+      command,
+      args.map((arg) => arg.toString()),
+      { cwd },
+    );
+    spawned.stdout.on("data", (data) => {
+      process.stdout.write(data);
     });
-    if (stdout) {
-      console.log(stdout);
-    }
-    if (stderr) {
-      console.error(stderr);
-    }
-  } catch (error) {
-    console.error(`Error executing command: ${command}`);
-    console.error((error as any).stderr || (error as any).message);
-    throw new Error(`Error executing command: ${command}`);
-  }
-};
+
+    spawned.stderr.on("data", (data) => {
+      process.stderr.write(data);
+    });
+
+    return await new Promise<void>((resolve, reject) => {
+      spawned.on("close", (code: number) => {
+        if (code !== 0) {
+          reject(new Error(`Process exited with code ${code}`));
+          return;
+        }
+
+        resolve();
+      });
+
+      spawned.on("error", (err) => {
+        reject(
+          new Error(
+            `Error executing command \`${
+              command + " " + args.join(" ")
+            }\`: ${err.message}`,
+          ),
+        );
+      });
+    });
+  };
