@@ -1,7 +1,6 @@
 import { UltraHonkBackend } from "@aztec/bb.js";
 import type { CompiledCircuit } from "@noir-lang/noir_js";
 import { ethers } from "ethers";
-import { omit } from "lodash";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -94,14 +93,10 @@ class MpcProverPartyService {
         return;
       }
 
+      // deterministic ordering
       const [order, otherOrder] =
         orderA.side === "seller" ? [orderA, orderB] : [orderB, orderA];
-      console.log(
-        "executing orders",
-        this.partyIndex,
-        omit(order, ["inputShared", "result"]),
-        omit(otherOrder, ["inputShared", "result"]),
-      );
+      console.log("executing orders", this.partyIndex, order.id, otherOrder.id);
       try {
         const { proof } = await proveAsParty({
           circuit: params.circuit,

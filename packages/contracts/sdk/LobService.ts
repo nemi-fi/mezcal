@@ -153,7 +153,6 @@ export class LobService {
       [`${side}_order`]: order,
       [`${side}_randomness`]: randomness,
     };
-    console.log("side", side, randomness);
     // only one trading party need to provide public inputs
     const inputPublic =
       side === "seller"
