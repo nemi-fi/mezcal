@@ -76,7 +76,15 @@ class MpcProverPartyService {
     orderBId: OrderId;
     circuit: CompiledCircuit;
   }) {
-    const options: QueueAddOptions = { throwOnTimeout: true };
+    const options: QueueAddOptions = {
+      throwOnTimeout: true,
+      // this is a hack to enforce the order of execution matches across all MPC parties
+      priority: Number(
+        ethers.getBigInt(
+          ethers.id([params.orderAId, params.orderBId].sort().join("")),
+        ) % BigInt(Number.MAX_SAFE_INTEGER),
+      ),
+    };
     this.#queue.add(async () => {
       const orderA = this.#storage.get(params.orderAId);
       const orderB = this.#storage.get(params.orderBId);
@@ -127,7 +135,6 @@ async function proveAsParty(params: {
   input0Shared: string;
   input1Shared: string;
 }) {
-  console.log("proving as party", params.partyIndex);
   return await inWorkingDir(async (workingDir) => {
     for (const [traderIndex, inputShared] of [
       params.input0Shared,
