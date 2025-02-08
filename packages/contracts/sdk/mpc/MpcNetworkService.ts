@@ -104,27 +104,27 @@ class MpcProverPartyService {
       }
 
       // deterministic ordering
-      const [order, otherOrder] =
+      const [order0, order1] =
         orderA.side === "seller" ? [orderA, orderB] : [orderB, orderA];
-      console.log("executing orders", this.partyIndex, order.id, otherOrder.id);
+      console.log("executing orders", this.partyIndex, order0.id, order1.id);
       try {
         const { proof } = await proveAsParty({
           circuit: params.circuit,
           partyIndex: this.partyIndex,
-          input0Shared: order.inputShared,
-          input1Shared: otherOrder.inputShared,
+          input0Shared: order0.inputShared,
+          input1Shared: order1.inputShared,
         });
         const proofHex = ethers.hexlify(proof);
-        order.result.resolve(proofHex);
-        otherOrder.result.resolve(proofHex);
-        this.#storage.delete(order.id);
-        this.#storage.delete(otherOrder.id);
+        order0.result.resolve(proofHex);
+        order1.result.resolve(proofHex);
+        this.#storage.delete(order0.id);
+        this.#storage.delete(order1.id);
         console.log(
-          `orders matched: ${this.partyIndex} ${order.id} ${otherOrder.id}`,
+          `orders matched: ${this.partyIndex} ${order0.id} ${order1.id}`,
         );
       } catch (error) {
         console.log(
-          `orders did not match: ${this.partyIndex} ${order.id} ${otherOrder.id}`,
+          `orders did not match: ${this.partyIndex} ${order0.id} ${order1.id}`,
         );
       }
     }, options);
