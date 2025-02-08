@@ -26,7 +26,6 @@ export class TreesService {
         note_hash_root: ethers.hexlify(
           noteHashTree.getRoot(INCLUDE_UNCOMMITTED),
         ),
-        nullifier_root: nullifierTree.getRoot(),
       };
     });
 

@@ -43,9 +43,8 @@ contract PoolERC20 is PoolGeneric {
     ) external {
         token.safeTransferFrom(msg.sender, address(this), amount);
 
-        PublicInputs.Type memory pi = PublicInputs.create(2 + 2 + U256_LIMBS);
+        PublicInputs.Type memory pi = PublicInputs.create(1 + 2 + U256_LIMBS);
         pi.push(getNoteHashTree().root);
-        pi.push(getNullifierTree().root);
         pi.push(address(token));
         pi.pushUint256Limbs(amount);
         // TODO(security): ensure noteHash does not already exist in the noteHashTree. If it exists, the tx will never be rolled up and the money will be lost.
@@ -107,10 +106,9 @@ contract PoolERC20 is PoolGeneric {
         NoteInput calldata joinNote
     ) external {
         PublicInputs.Type memory pi = PublicInputs.create(
-            2 + MAX_NOTES_TO_JOIN + 1
+            1 + MAX_NOTES_TO_JOIN + 1
         );
         pi.push(getNoteHashTree().root);
-        pi.push(getNullifierTree().root);
         pi.push(joinNote.noteHash);
         for (uint256 i = 0; i < MAX_NOTES_TO_JOIN; i++) {
             pi.push(nullifiers[i]);
@@ -137,9 +135,8 @@ contract PoolERC20 is PoolGeneric {
         NoteInput calldata changeNote,
         NoteInput calldata toNote
     ) external {
-        PublicInputs.Type memory pi = PublicInputs.create(5);
+        PublicInputs.Type memory pi = PublicInputs.create(4);
         pi.push(getNoteHashTree().root);
-        pi.push(getNullifierTree().root);
         pi.push(changeNote.noteHash);
         pi.push(toNote.noteHash);
         pi.push(nullifier);
