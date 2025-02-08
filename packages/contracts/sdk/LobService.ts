@@ -212,4 +212,4 @@ export class LobService {
   }
 }
 
-type SwapResult = Awaited<ReturnType<LobService["requestSwap"]>>;
+export type SwapResult = Awaited<ReturnType<LobService["requestSwap"]>>;
