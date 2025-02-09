@@ -40,8 +40,7 @@ export class EvmAccountService {
   }
 
   async getSecretKey(account: ethers.Signer) {
-    const message =
-      "Sign this message to generate a encrypted-evm.oleh.wtf secret key"; // TODO(security): put the correct domain here
+    const message = "Sign this message to derive a Mezcal secret key"; // TODO(security): put the correct domain here
     const address = (await account.getAddress()).toLowerCase();
     if (!this.#secretKeys[address]) {
       this.#secretKeys[address] = utils.iife(async () => {

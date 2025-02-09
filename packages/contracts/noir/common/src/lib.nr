@@ -49,7 +49,7 @@ pub global U256_LIMBS: u32 = 3;
 
 pub type U256 = BigNum<U256_LIMBS, 257, U256Params>;
 
-/// Walmart Aztec address
+/// User address within the rollup
 #[derive(Eq, Serialize)]
 pub struct WaAddress {
     inner: Field,

@@ -1,6 +1,8 @@
-# Waztec
+<img align="right" width="150" height="150" top="100" src="https://github.com/user-attachments/assets/c80982e6-103e-45b0-8bd1-b6c38c5debe5">
 
-Walmart version of [Aztec](https://aztec.network).
+# Mezcal
+
+Mezcal (Nahuatl: mexcalli) - agave booze.
 
 ## TODO
 
@@ -14,12 +16,11 @@ Walmart version of [Aztec](https://aztec.network).
 - [x] use bignumber for amounts
 - [ ] support ETH
 - [ ] fees
-- [ ] get the remained of tokens from router to relayer/treasury
+- [ ] prove against a historical note hash tree root
 - [x] PublicInputsBuilder
 - [ ] deploy as proxy
 - [ ] test contracts with larger token amounts
-- [x] Rename ValueNote to Erc20Note and namespace all erc20 circuit names
-- [ ] Make PoolGeneric permissionless and make PoolERC20.execute permissionless (if possible)
+- [ ] TODO(security): parse inputs to circuits instead of assuming they are correct. Same applies to types returned from `unconstrained` functions. <https://github.com/noir-lang/noir/issues/7181> <https://github.com/noir-lang/noir/issues/4218>
 
 ### Backend
 
@@ -33,9 +34,9 @@ Walmart version of [Aztec](https://aztec.network).
 - [x] transfer
 - [ ] join (maybe behind the scenes, multicall)
 - [ ] unshield
-- [ ] wallet connect to interact with dapps
 
-### compliance (so I don't go to jail)
+### compliance
 
 - [ ] unshield only mode
 - [ ] set shield limit to 10 USDC
+- [ ] disclaimer that the rollup is not audited
