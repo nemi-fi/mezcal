@@ -7,8 +7,7 @@ mod note;
 mod owned_note;
 
 pub use context::{Context, Result};
-pub use erc20_note::{Erc20Note, Erc20NoteConsumptionInputs};
-pub use note::Note;
+pub use note::{compute_note_hash, Note};
 pub use owned_note::{NoteConsumptionInputs, OwnedNote};
 pub use protocol_types::{address::EthAddress, traits::Serialize};
 

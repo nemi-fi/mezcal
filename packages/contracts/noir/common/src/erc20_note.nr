@@ -1,5 +1,3 @@
-use protocol_types::hash::poseidon2_hash_with_separator;
-
 // fails to compile if this file is moved to erc20 crate
 
 pub struct Erc20Note {
@@ -7,6 +5,8 @@ pub struct Erc20Note {
     pub amount: crate::TokenAmount,
     pub randomness: Field,
 }
+
+impl crate::Note for Erc20Note {}
 
 impl Erc20Note {
     pub fn sub_and_emit_change<let N: u32>(
@@ -38,13 +38,6 @@ impl crate::Serialize<6> for Erc20Note {
             .concat(self.amount.token.serialize())
             .concat(self.amount.amount.limbs)
             .concat([self.randomness])
-    }
-}
-
-impl crate::Note for Erc20Note {
-    fn hash(self) -> Field {
-        let serialized = self.serialize();
-        poseidon2_hash_with_separator(serialized, crate::GENERATOR_INDEX__NOTE_HASH)
     }
 }
 
