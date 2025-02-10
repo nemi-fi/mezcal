@@ -27,6 +27,8 @@ export const MAX_NULLIFIERS_PER_ROLLUP = 64;
 const GENERATOR_INDEX__WA_ADDRESS = 1;
 // Note: keep in sync with other languages
 const GENERATOR_INDEX__NOTE_NULLIFIER = 2;
+// Note: keep in sync with other languages
+const GENERATOR_INDEX__NOTE_HASH = 3;
 
 // Note: keep in sync with other languages
 export const MAX_TOKENS_IN_PER_EXECUTION = 4;
@@ -392,7 +394,12 @@ export class Erc20Note {
   }
 
   async hash(): Promise<string> {
-    return (await poseidon2Hash(await this.serialize())).toString();
+    return (
+      await poseidon2Hash([
+        GENERATOR_INDEX__NOTE_HASH,
+        ...(await this.serialize()),
+      ])
+    ).toString();
   }
 
   async computeNullifier(secretKey: string) {

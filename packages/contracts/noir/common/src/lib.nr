@@ -7,8 +7,7 @@ mod note;
 mod owned_note;
 
 pub use context::{Context, Result};
-pub use erc20_note::{Erc20Note, Erc20NoteConsumptionInputs};
-pub use note::Note;
+pub use note::{compute_note_hash, Note};
 pub use owned_note::{NoteConsumptionInputs, OwnedNote};
 pub use protocol_types::{address::EthAddress, traits::Serialize};
 
@@ -41,13 +40,15 @@ pub global MAX_TOKENS_OUT_PER_EXECUTION: u32 = 4;
 pub global GENERATOR_INDEX__WA_ADDRESS: Field = 1;
 // Note: keep in sync with other languages
 pub global GENERATOR_INDEX__NOTE_NULLIFIER: Field = 2;
+// Note: keep in sync with other languages
+pub global GENERATOR_INDEX__NOTE_HASH: Field = 3;
 
 // Note: keep in sync with other languages
 pub global U256_LIMBS: u32 = 3;
 
 pub type U256 = uint252::U252;
 
-/// Walmart Aztec address
+/// User address within the rollup
 #[derive(Eq, Serialize)]
 pub struct WaAddress {
     inner: Field,

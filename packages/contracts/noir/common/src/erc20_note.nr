@@ -6,6 +6,8 @@ pub struct Erc20Note {
     pub randomness: Field,
 }
 
+impl crate::Note for Erc20Note {}
+
 impl Erc20Note {
     pub fn sub_and_emit_change<let N: u32>(
         context: &mut crate::Context,
@@ -36,14 +38,6 @@ impl crate::Serialize<4> for Erc20Note {
             .concat(self.amount.token.serialize())
             .concat([self.amount.amount.to_integer()])
             .concat([self.randomness])
-    }
-}
-
-impl crate::Note for Erc20Note {
-    fn hash(self) -> Field {
-        let serialized = self.serialize();
-        // TODO(security): use poseidon2_hash_with_separator
-        std::hash::poseidon2::Poseidon2::hash(serialized, serialized.len())
     }
 }
 

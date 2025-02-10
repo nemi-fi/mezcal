@@ -9,7 +9,7 @@ const core = new Core({
 });
 
 const metadata = {
-  name: "Walmart Aztec",
+  name: "Mezcal",
   description: "Private anything",
   url: "https://reown.com/appkit", // origin must match your domain & subdomain
   icons: ["https://assets.reown.com/reown-profile-pic.png"],
