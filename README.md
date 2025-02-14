@@ -2,7 +2,9 @@
 
 # Mezcal
 
-Mezcal (Nahuatl: mexcalli) - agave booze.
+Mezcal (Nahuatl: mexcalli - agave booze) - on-chain dark pool implementation using [Noir](https://noir-lang.org) and [Taceo coNoir](https://taceo.io). Hides EVERYTHING about orders and traders(tokens, amounts and addresses of traders are completely hidden). Trades settled on an EVM chain using a very simplified version of [Aztec Protocol](https://aztec.network). The tradeoff is O(N^2) order matching engine.
+
+The code is highly experimental. The core code is located in `packages/contracts`.
 
 ## TODO
 
@@ -21,22 +23,3 @@ Mezcal (Nahuatl: mexcalli) - agave booze.
 - [ ] deploy as proxy
 - [ ] test contracts with larger token amounts
 - [ ] TODO(security): parse inputs to circuits instead of assuming they are correct. Same applies to types returned from `unconstrained` functions. <https://github.com/noir-lang/noir/issues/7181> <https://github.com/noir-lang/noir/issues/4218>
-
-### Backend
-
-- [x] prove using native bb
-- [ ] persist merkle trees
-- [ ] return pending tree roots
-
-### UI
-
-- [x] shield
-- [x] transfer
-- [ ] join (maybe behind the scenes, multicall)
-- [ ] unshield
-
-### compliance
-
-- [ ] unshield only mode
-- [ ] set shield limit to 10 USDC
-- [ ] disclaimer that the rollup is not audited
