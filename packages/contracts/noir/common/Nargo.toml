@@ -5,5 +5,5 @@ authors = ["Oleh Misarosh <olehmisar@gmail.com>"]
 compiler_version = ">=0.39.0"
 
 [dependencies]
-protocol_types = { git = "https://github.com/AztecProtocol/aztec-packages/", tag = "aztec-packages-v0.67.0", directory = "noir-projects/noir-protocol-circuits/crates/types" }
-nodash = { tag = "v0.39.4", git = "https://github.com/olehmisar/nodash/" }
+protocol_types = { git = "https://github.com/AztecProtocol/aztec-packages/", tag = "aztec-packages-v0.72.1", directory = "noir-projects/noir-protocol-circuits/crates/types" }
+nodash = { tag = "v0.40.0", git = "https://github.com/olehmisar/nodash/" }

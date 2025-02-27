@@ -3,7 +3,7 @@ use protocol_types::hash::poseidon2_hash_with_separator;
 mod context;
 mod uint252;
 mod erc20_note;
-mod note;
+pub(crate) mod note;
 mod owned_note;
 
 pub use context::{Context, Result};

@@ -3,7 +3,7 @@ use protocol_types::hash::poseidon2_hash_with_separator;
 /// A marker trait to mark structs as notes
 pub trait Note: crate::Serialize<_> {
 
-    pub fn emit(self, context: &mut crate::Context) {
+    fn emit(self, context: &mut crate::Context) {
         context.push_note_hash(crate::compute_note_hash(self));
     }
 }

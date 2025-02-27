@@ -42,16 +42,16 @@ timeEnd "mpc-generate-witness"
 
 # run proving in MPC
 timeStart "mpc-build-proving-key"
-co-noir build-proving-key --witness target/witness.gz.0.shared --circuit $CIRCUIT --crs bn254_g1.dat --protocol REP3 --config configs/party0.toml --out target/proving_key.0 &
-co-noir build-proving-key --witness target/witness.gz.1.shared --circuit $CIRCUIT --crs bn254_g1.dat --protocol REP3 --config configs/party1.toml --out target/proving_key.1 &
-co-noir build-proving-key --witness target/witness.gz.2.shared --circuit $CIRCUIT --crs bn254_g1.dat --protocol REP3 --config configs/party2.toml --out target/proving_key.2
+co-noir build-proving-key --witness target/witness.gz.0.shared --circuit $CIRCUIT --protocol REP3 --config configs/party0.toml --out target/proving_key.0 &
+co-noir build-proving-key --witness target/witness.gz.1.shared --circuit $CIRCUIT --protocol REP3 --config configs/party1.toml --out target/proving_key.1 &
+co-noir build-proving-key --witness target/witness.gz.2.shared --circuit $CIRCUIT --protocol REP3 --config configs/party2.toml --out target/proving_key.2
 wait $(jobs -p)
 timeEnd "mpc-build-proving-key"
 
 timeStart "mpc-generate-proof"
-co-noir generate-proof --proving-key target/proving_key.0 --protocol REP3 --hasher KECCAK --config configs/party0.toml --out target/proof.0.proof --public-input target/public_input.json &
-co-noir generate-proof --proving-key target/proving_key.1 --protocol REP3 --hasher KECCAK --config configs/party1.toml --out target/proof.1.proof &
-co-noir generate-proof --proving-key target/proving_key.2 --protocol REP3 --hasher KECCAK --config configs/party2.toml --out target/proof.2.proof
+co-noir generate-proof --proving-key target/proving_key.0 --protocol REP3 --hasher KECCAK --crs ~/.bb-crs/bn254_g1.dat --config configs/party0.toml --out target/proof.0.proof --public-input target/public_input.json &
+co-noir generate-proof --proving-key target/proving_key.1 --protocol REP3 --hasher KECCAK --crs ~/.bb-crs/bn254_g1.dat --config configs/party1.toml --out target/proof.1.proof &
+co-noir generate-proof --proving-key target/proving_key.2 --protocol REP3 --hasher KECCAK --crs ~/.bb-crs/bn254_g1.dat --config configs/party2.toml --out target/proof.2.proof
 wait $(jobs -p)
 timeEnd "mpc-generate-proof"
 

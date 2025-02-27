@@ -29,9 +29,9 @@ timeEnd "mpc-generate-witness"
 
 # run proving in MPC
 timeStart "mpc-build-proving-key"
-co-noir build-proving-key --witness $WORK_DIR/witness.gz.$PARTY_INDEX.shared --circuit $CIRCUIT --crs ~/.bb-crs/bn254_g1.dat --protocol REP3 --config $PARTY_CONFIGS_DIR/party$PARTY_INDEX.toml --out $WORK_DIR/proving_key.$PARTY_INDEX
+co-noir build-proving-key --witness $WORK_DIR/witness.gz.$PARTY_INDEX.shared --circuit $CIRCUIT --protocol REP3 --config $PARTY_CONFIGS_DIR/party$PARTY_INDEX.toml --out $WORK_DIR/proving_key.$PARTY_INDEX
 timeEnd "mpc-build-proving-key"
 
 timeStart "mpc-generate-proof"
-co-noir generate-proof --proving-key $WORK_DIR/proving_key.$PARTY_INDEX --protocol REP3 --hasher KECCAK --config $PARTY_CONFIGS_DIR/party$PARTY_INDEX.toml --out $WORK_DIR/proof.$PARTY_INDEX.proof --public-input $WORK_DIR/public_input.json
+co-noir generate-proof --proving-key $WORK_DIR/proving_key.$PARTY_INDEX --protocol REP3 --hasher KECCAK --crs ~/.bb-crs/bn254_g1.dat --config $PARTY_CONFIGS_DIR/party$PARTY_INDEX.toml --out $WORK_DIR/proof.$PARTY_INDEX.proof --public-input $WORK_DIR/public_input.json
 timeEnd "mpc-generate-proof"

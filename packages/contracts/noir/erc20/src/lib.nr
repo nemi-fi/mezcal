@@ -1,6 +1,8 @@
 pub use common::erc20_note::{Erc20Note, Erc20NoteConsumptionInputs};
 
 pub mod Token {
+    use common::Note;
+
     pub fn mint(
         context: &mut common::Context,
         to: common::WaAddress,
