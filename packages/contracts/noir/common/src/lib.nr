@@ -1,7 +1,7 @@
 use protocol_types::hash::poseidon2_hash_with_separator;
 
 mod context;
-mod uint252;
+mod uint253;
 mod erc20_note;
 pub(crate) mod note;
 mod owned_note;
@@ -46,7 +46,7 @@ pub global GENERATOR_INDEX__NOTE_HASH: Field = 3;
 // Note: keep in sync with other languages
 pub global U256_LIMBS: u32 = 3;
 
-pub type U256 = uint252::U252;
+pub type U256 = uint253::U253;
 
 /// User address within the rollup
 #[derive(Eq, Serialize)]
