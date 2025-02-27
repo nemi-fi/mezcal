@@ -1,9 +1,9 @@
-use bignum::{BigNum, fields::U256::U256Params};
+use bignum::BigNumTrait;
 use protocol_types::hash::poseidon2_hash_with_separator;
 
 mod context;
 mod erc20_note;
-mod note;
+pub(crate) mod note;
 mod owned_note;
 
 pub use context::{Context, Result};
@@ -46,7 +46,7 @@ pub global GENERATOR_INDEX__NOTE_HASH: Field = 3;
 // Note: keep in sync with other languages
 pub global U256_LIMBS: u32 = 3;
 
-pub type U256 = BigNum<U256_LIMBS, 257, U256Params>;
+pub type U256 = bignum::U256;
 
 /// User address within the rollup
 #[derive(Eq, Serialize)]
@@ -74,7 +74,7 @@ pub struct TokenAmount {
 
 impl TokenAmount {
     pub fn zero(token: crate::EthAddress) -> Self {
-        Self { token, amount: U256::new() }
+        Self { token, amount: U256::zero() }
     }
 
     fn _check(self, other: Self) {
