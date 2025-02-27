@@ -29,15 +29,18 @@ fn main(
     );
     assert(new_note_hash_tree == expected_new_note_hash_tree, "Invalid new note hash tree");
 
-    let new_nullifier_tree = compute_new_nullifier_tree_snapshot(
-        nullifier_tree,
-        new_nullifiers,
-        sorted_nullifiers,
-        sorted_nullifiers_indexes,
-        nullifier_subtree_sibling_path,
-        nullifier_low_leaf_preimages,
-        nullifier_low_leaf_membership_witnesses,
-    );
+    // Safety: TODO(security): constrain this call. This is unconstrained because it's very expensive, so we mark it unconstrained while in active development
+    let new_nullifier_tree = unsafe {
+        compute_new_nullifier_tree_snapshot(
+            nullifier_tree,
+            new_nullifiers,
+            sorted_nullifiers,
+            sorted_nullifiers_indexes,
+            nullifier_subtree_sibling_path,
+            nullifier_low_leaf_preimages,
+            nullifier_low_leaf_membership_witnesses,
+        )
+    };
     assert(new_nullifier_tree == expected_new_nullifier_tree, "Invalid new nullifier tree");
 }
 
