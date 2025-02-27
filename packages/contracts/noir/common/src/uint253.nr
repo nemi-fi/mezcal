@@ -4,18 +4,18 @@
 use std::cmp::{Eq, Ord, Ordering};
 use std::ops::{Add, Div, Mul, Rem, Sub};
 
-// Maximum value for U252 (2^252 - 1), chosen to fit within Aztec's field arithmetic bounds
-pub global MAX_U252: Field = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+// Maximum value for U253 (2^253 - 1), chosen to fit within Aztec's field arithmetic bounds
+pub global MAX_U253: Field = 0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
-pub global U252_PACKED_LEN: u32 = 1;
+pub global U253_PACKED_LEN: u32 = 1;
 
-pub struct U252 {
+pub struct U253 {
     value: Field,
 }
 
-impl U252 {
+impl U253 {
     pub fn new(value: Field) -> Self {
-        value.assert_max_bit_size::<252>();
+        value.assert_max_bit_size::<253>();
         Self { value }
     }
 
@@ -24,7 +24,7 @@ impl U252 {
     }
 
     pub fn from_integer(value: Field) -> Self {
-        value.assert_max_bit_size::<252>();
+        value.assert_max_bit_size::<253>();
         Self { value }
     }
 
@@ -41,7 +41,7 @@ impl U252 {
     }
 
     pub fn max() -> Self {
-        Self { value: MAX_U252 }
+        Self { value: MAX_U253 }
     }
 
     pub fn is_zero(self) -> bool {
@@ -53,17 +53,17 @@ impl U252 {
     pub unconstrained fn div_rem_unconstrained(self, other: Self) -> (Self, Self) {
         assert(!(other.value == 0), "Division by zero");
 
-        self.value.assert_max_bit_size::<252>();
-        other.value.assert_max_bit_size::<252>();
+        self.value.assert_max_bit_size::<253>();
+        other.value.assert_max_bit_size::<253>();
 
-        let bits: [u1; 252] = self.value.to_be_bits();
+        let bits: [u1; 253] = self.value.to_be_bits();
         let divisor = other.value;
 
         let mut quotient: Field = 0;
         let mut remainder: Field = 0;
 
         // Process each bit from MSB to LSB, similar to paper-and-pencil division
-        for i in 0..252 {
+        for i in 0..253 {
             // Shift remainder left by 1 bit and add next bit
             remainder = remainder * 2 + (bits[i] as Field);
 
@@ -107,73 +107,72 @@ impl U252 {
         }
     }
 
-    // Adds two U252 values without overflow checks - use with caution
+    // Adds two U253 values without overflow checks - use with caution
     pub fn add_unchecked(self, other: Self) -> Self {
         Self { value: self.value + other.value }
     }
 
-    // Subtracts two U252 values without underflow checks - use with caution
+    // Subtracts two U253 values without underflow checks - use with caution
     pub fn sub_unchecked(self, other: Self) -> Self {
         Self { value: self.value - other.value }
     }
 }
 
-
-impl Add for U252 {
+impl Add for U253 {
     fn add(self, other: Self) -> Self {
         let result = self.value + other.value;
-        result.assert_max_bit_size::<252>();
+        result.assert_max_bit_size::<253>();
 
-        assert(!MAX_U252.lt(result), "U252 addition overflow");
-        assert(!result.lt(self.value), "U252 addition overflow");
-        assert(!result.lt(other.value), "U252 addition overflow");
+        assert(!MAX_U253.lt(result), "U253 addition overflow");
+        assert(!result.lt(self.value), "U253 addition overflow");
+        assert(!result.lt(other.value), "U253 addition overflow");
         Self { value: result }
     }
 }
 
-impl Sub for U252 {
+impl Sub for U253 {
     fn sub(self, other: Self) -> Self {
         assert(
             other.value.lt(self.value) | other.value.eq(self.value),
-            "U252 subtraction underflow",
+            "U253 subtraction underflow",
         );
         let result = self.value - other.value;
-        result.assert_max_bit_size::<252>();
+        result.assert_max_bit_size::<253>();
         Self { value: result }
     }
 }
 
-impl Mul for U252 {
+impl Mul for U253 {
     fn mul(self, other: Self) -> Self {
         let result = self.value * other.value;
 
-        result.assert_max_bit_size::<252>();
+        result.assert_max_bit_size::<253>();
         // Allow multiplication by 1 without additional checks, otherwise check for overflow
         assert(
             (self.value == 1)
                 | (other.value == 1)
-                | (result.lt(MAX_U252 + 1) & !result.lt(self.value) & !result.lt(other.value)),
-            "U252 multiplication overflow",
+                | (result.lt(MAX_U253 + 1) & !result.lt(self.value) & !result.lt(other.value)),
+            "U253 multiplication overflow",
         );
         Self { value: result }
     }
 }
 
-impl Div for U252 {
+impl Div for U253 {
     fn div(self, other: Self) -> Self {
         let (quotient, _) = self.div_rem(other);
         quotient
     }
 }
 
-impl Rem for U252 {
+impl Rem for U253 {
     fn rem(self, other: Self) -> Self {
         let (_, remainder) = self.div_rem(other);
         remainder
     }
 }
 
-impl Ord for U252 {
+impl Ord for U253 {
     fn cmp(self, other: Self) -> Ordering {
         if self.value.lt(other.value) {
             Ordering::less()
@@ -185,7 +184,7 @@ impl Ord for U252 {
     }
 }
 
-impl Eq for U252 {
+impl Eq for U253 {
     fn eq(self, other: Self) -> bool {
         self.value.eq(other.value)
     }
