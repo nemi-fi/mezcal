@@ -1,4 +1,4 @@
-<img align="right" width="150" height="150" top="100" src="https://github.com/user-attachments/assets/c80982e6-103e-45b0-8bd1-b6c38c5debe5">
+<img align="right" width="150" height="150" top="100" src="https://i.ibb.co/4ZFHPTNc/411361781-c80982e6-103e-45b0-8bd1-b6c38c5debe5-Large.jpg">
 
 # Mezcal
 
