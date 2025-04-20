@@ -14,8 +14,8 @@
     "_chore": "pnpm i"
   },
   "dependencies": {
-    "@aztec/aztec.js": "0.72.1",
-    "@aztec/foundation": "0.72.1",
+    "@aztec/aztec.js": "0.80.0",
+    "@aztec/foundation": "0.80.0",
     "@hpke/core": "^1.7.1",
     "@hpke/dhkem-x25519": "^1.6.1",
     "@noir-lang/acvm_js": "1.0.0-beta.3",
