@@ -1,7 +1,4 @@
-use protocol_types::{
-    abis::nullifier_leaf_preimage::NullifierLeafPreimage, hash::poseidon2_hash_with_separator,
-    merkle_tree,
-};
+use protocol_types::{hash::poseidon2_hash_with_separator, merkle_tree};
 
 pub trait OwnedNote: crate::Note {
     fn owner(self) -> crate::WaAddress;
@@ -23,8 +20,6 @@ pub struct NoteConsumptionInputs<T> {
     pub note: T,
     pub note_index: Field,
     pub note_sibling_path: [Field; crate::NOTE_HASH_TREE_HEIGHT],
-    pub nullifier_low_leaf_preimage: NullifierLeafPreimage,
-    pub nullifier_low_leaf_membership_witness: merkle_tree::MembershipWitness<crate::NOTE_HASH_TREE_HEIGHT>,
 }
 
 impl<T> NoteConsumptionInputs<T>

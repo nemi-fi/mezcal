@@ -11,7 +11,7 @@ import {
   MAX_NULLIFIERS_PER_ROLLUP,
   NOTE_HASH_TREE_HEIGHT,
   NULLIFIER_TREE_HEIGHT,
-} from "./RollupService";
+} from "./PoolErc20Service";
 
 export class TreesService {
   constructor(private contract: PoolERC20) {}
@@ -36,11 +36,7 @@ export class TreesService {
     .implement(async (params) => {
       const { Fr } = await import("@aztec/aztec.js");
 
-      const { noteHashTree, nullifierTree } = await this.getTrees();
-
-      const nullifierNmWitness = await nullifierTree.getNonMembershipWitness(
-        new Fr(BigInt(params.nullifier)),
-      );
+      const { noteHashTree } = await this.getTrees();
 
       const noteIndex = noteHashTree.findLeafIndex(
         new Fr(BigInt(params.noteHash)),
@@ -54,9 +50,6 @@ export class TreesService {
           .toTuple()
           .map((x: Fr) => x.toString()),
         note_index: ethers.toQuantity(noteIndex),
-        nullifier_low_leaf_preimage: nullifierNmWitness.low_leaf_preimage,
-        nullifier_low_leaf_membership_witness:
-          nullifierNmWitness.low_leaf_membership_witness,
       };
     });
 

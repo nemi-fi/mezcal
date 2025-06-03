@@ -4,7 +4,6 @@ import { type PoolERC20 } from "../typechain-types";
 import { NoteInputStruct } from "../typechain-types/contracts/PoolERC20";
 import { MpcProverService, type Side } from "./mpc/MpcNetworkService.js";
 import { splitInput } from "./mpc/utils.js";
-import { type ITreesService } from "./RemoteTreesService.js";
 import {
   CompleteWaAddress,
   Erc20Note,
@@ -12,7 +11,8 @@ import {
   TokenAmount,
   type NoirAndBackend,
   type PoolErc20Service,
-} from "./RollupService.js";
+} from "./PoolErc20Service.js";
+import { type ITreesService } from "./RemoteTreesService.js";
 import { prove } from "./utils.js";
 
 export class LobService {

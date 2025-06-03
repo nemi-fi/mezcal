@@ -11,7 +11,7 @@ import {
   MAX_NULLIFIERS_PER_ROLLUP,
   NOTE_HASH_SUBTREE_HEIGHT,
   type NoirAndBackend,
-} from "./RollupService";
+} from "./PoolErc20Service";
 import type { TreesService } from "./TreesService";
 import { prove } from "./utils.js";
 
