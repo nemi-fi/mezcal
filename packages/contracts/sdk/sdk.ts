@@ -3,13 +3,13 @@ import { mapValues } from "lodash-es";
 import type { AsyncOrSync } from "ts-essentials";
 import type { PoolERC20 } from "../typechain-types/index.js";
 import { EncryptionService } from "./EncryptionService.js";
+import { PoolErc20Service } from "./PoolErc20Service.js";
 import { type ITreesService } from "./RemoteTreesService.js";
-import { PoolErc20Service } from "./RollupService.js";
 
 export * from "./EncryptionService.js";
 export * from "./NonMembershipTree.js";
+export * from "./PoolErc20Service.js";
 export * from "./RemoteTreesService.js";
-export * from "./RollupService.js";
 export * from "./TreesService.js";
 
 export function createCoreSdk(contract: PoolERC20) {

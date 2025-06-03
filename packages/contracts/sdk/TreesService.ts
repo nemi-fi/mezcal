@@ -11,7 +11,7 @@ import {
   MAX_NULLIFIERS_PER_ROLLUP,
   NOTE_HASH_TREE_HEIGHT,
   NULLIFIER_TREE_HEIGHT,
-} from "./RollupService";
+} from "./PoolErc20Service";
 
 export class TreesService {
   constructor(private contract: PoolERC20) {}
