@@ -2,7 +2,7 @@
   import { lib } from "$lib";
   import { requestRollup } from "$lib/utils";
   import { sdk } from "@repo/contracts/sdk";
-  import { TokenAmount } from "@repo/contracts/sdk/RollupService";
+  import { TokenAmount } from "@repo/contracts/sdk/PoolErc20Service";
   import { Ui } from "@repo/ui";
   import { utils } from "@repo/utils";
   import { assert } from "ts-essentials";

@@ -2,7 +2,10 @@ import type { Fr } from "@aztec/aztec.js";
 import type { StandardIndexedTree } from "@aztec/merkle-tree";
 import { ethers } from "ethers";
 import { assert } from "ts-essentials";
-import { INCLUDE_UNCOMMITTED, NULLIFIER_SUBTREE_HEIGHT } from "./RollupService";
+import {
+  INCLUDE_UNCOMMITTED,
+  NULLIFIER_SUBTREE_HEIGHT,
+} from "./PoolErc20Service";
 
 export class NonMembershipTree {
   private constructor(readonly _tree: StandardIndexedTree) {}
