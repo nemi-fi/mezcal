@@ -6,7 +6,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import PQueue, { type QueueAddOptions } from "p-queue";
-import { decodeNativeHonkProof, promiseWithResolvers } from "../utils.js";
+import { promiseWithResolvers } from "../utils.js";
 import { inWorkingDir, makeRunCommand, splitInput } from "./utils.js";
 
 export class MpcProverService {
@@ -161,10 +161,11 @@ async function proveAsParty(params: {
       params.partyIndex,
     ]);
 
-    const { proof, publicInputs } = decodeNativeHonkProof(
-      fs.readFileSync(
-        path.join(workingDir, `proof.${params.partyIndex}.proof`),
-      ),
+    const proof = fs.readFileSync(
+      path.join(workingDir, `proof.${params.partyIndex}.proof`),
+    );
+    const publicInputs = JSON.parse(
+      fs.readFileSync(path.join(workingDir, "public-input.json"), "utf-8"),
     );
 
     // pre-verify proof

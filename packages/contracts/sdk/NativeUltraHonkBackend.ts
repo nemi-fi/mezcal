@@ -1,11 +1,9 @@
 import type { ProofData } from "@aztec/bb.js";
 import type { CompiledCircuit } from "@noir-lang/noir_js";
-import { chunk } from "lodash-es";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { Hex } from "ox";
-import { assert } from "ts-essentials";
+import { readNativeHonkProof } from "./utils.js";
 
 export class NativeUltraHonkBackend {
   constructor(
@@ -62,22 +60,7 @@ export class NativeUltraHonkBackend {
           reject(new Error(`Process exited with code ${code}`));
           return;
         }
-
-        const proof = fs.readFileSync(path.join(proofOutputPath, "proof"));
-        const publicInputs = fs.readFileSync(
-          path.join(proofOutputPath, "public_inputs"),
-        );
-        assert(
-          publicInputs.length % 32 === 0,
-          "publicInputs length must be divisible by 32",
-        );
-        resolve({
-          proof,
-          // TODO: not sure if this publicInputs decoding is correct
-          publicInputs: chunk(Array.from(publicInputs), 32).map((x) =>
-            Hex.fromBytes(Uint8Array.from(x)),
-          ),
-        });
+        resolve(readNativeHonkProof(proofOutputPath));
       });
 
       bbProcess.on("error", (err) => {
