@@ -1,6 +1,10 @@
 import type { Fr } from "@aztec/aztec.js";
 import type { InputMap } from "@noir-lang/noir_js";
 import { ethers } from "ethers";
+import { chunk } from "lodash-es";
+import fs from "node:fs";
+import path from "node:path";
+import { Hex } from "ox";
 import { assert } from "ts-essentials";
 import type { NoirAndBackend } from "./sdk.js";
 
@@ -75,4 +79,22 @@ export async function prove(
   });
   console.timeEnd(`${name} generateProof`);
   return { proof, witness, returnValue, publicInputs };
+}
+
+export function readNativeHonkProof(pathToProofDir: string) {
+  const proof = fs.readFileSync(path.join(pathToProofDir, "proof"));
+  const publicInputs = fs.readFileSync(
+    path.join(pathToProofDir, "public_inputs"),
+  );
+  assert(
+    publicInputs.length % 32 === 0,
+    "publicInputs length must be divisible by 32",
+  );
+  return {
+    proof,
+    // TODO: not sure if this publicInputs decoding is correct
+    publicInputs: chunk(Array.from(publicInputs), 32).map((x) =>
+      Hex.fromBytes(Uint8Array.from(x)),
+    ),
+  };
 }
