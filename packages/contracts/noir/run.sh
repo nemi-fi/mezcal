@@ -12,12 +12,12 @@ CIRCUIT=target/$CIRCUIT_NAME.json
 
 # merge Prover1.toml and Prover2.toml into Prover.toml
 # Convert TOML to JSON
-dasel -f "$CIRCUIT_NAME/Prover1.toml" -r toml -w json > prover1.json
-dasel -f "$CIRCUIT_NAME/Prover2.toml" -r toml -w json > prover2.json
+dasel -f "$CIRCUIT_NAME/Prover1.toml" -r toml -w json >prover1.json
+dasel -f "$CIRCUIT_NAME/Prover2.toml" -r toml -w json >prover2.json
 # Merge JSON with jq
-jq -s '.[0] * .[1]' prover1.json prover2.json > merged.json
+jq -s '.[0] * .[1]' prover1.json prover2.json >merged.json
 # Convert back to TOML
-dasel -f merged.json -r json -w toml > "$CIRCUIT_NAME/Prover.toml"
+dasel -f merged.json -r json -w toml >"$CIRCUIT_NAME/Prover.toml"
 rm prover1.json prover2.json merged.json
 
 # split input into shares
@@ -49,9 +49,9 @@ wait $(jobs -p)
 timeEnd "mpc-build-proving-key"
 
 timeStart "mpc-generate-proof"
-co-noir generate-proof --proving-key target/proving_key.0 --protocol REP3 --hasher KECCAK --crs ~/.bb-crs/bn254_g1.dat --config configs/party0.toml --out target/proof.0.proof --public-input target/public_input.json &
-co-noir generate-proof --proving-key target/proving_key.1 --protocol REP3 --hasher KECCAK --crs ~/.bb-crs/bn254_g1.dat --config configs/party1.toml --out target/proof.1.proof &
-co-noir generate-proof --proving-key target/proving_key.2 --protocol REP3 --hasher KECCAK --crs ~/.bb-crs/bn254_g1.dat --config configs/party2.toml --out target/proof.2.proof
+co-noir generate-proof --proving-key target/proving_key.0 --protocol REP3 --hasher keccak --crs ~/.bb-crs/bn254_g1.dat --config configs/party0.toml --out target/proof.0.proof --public-input target/public_input.json &
+co-noir generate-proof --proving-key target/proving_key.1 --protocol REP3 --hasher keccak --crs ~/.bb-crs/bn254_g1.dat --config configs/party1.toml --out target/proof.1.proof &
+co-noir generate-proof --proving-key target/proving_key.2 --protocol REP3 --hasher keccak --crs ~/.bb-crs/bn254_g1.dat --config configs/party2.toml --out target/proof.2.proof
 wait $(jobs -p)
 timeEnd "mpc-generate-proof"
 
@@ -62,13 +62,12 @@ timeStart "bb-generate-proof"
 bb prove_ultra_keccak_honk -b $CIRCUIT -w target/$CIRCUIT_NAME.gz -o target/proof_bb.proof
 timeEnd "bb-generate-proof"
 
-
 # Create verification key
-co-noir create-vk --circuit $CIRCUIT --crs bn254_g1.dat --hasher KECCAK --vk target/verification_key
+co-noir create-vk --circuit $CIRCUIT --crs bn254_g1.dat --hasher keccak --vk target/verification_key
 echo "Verification key created"
 
 # verify proof
-co-noir verify --proof target/proof.0.proof --vk target/verification_key --hasher KECCAK --crs bn254_g2.dat
+co-noir verify --proof target/proof.0.proof --vk target/verification_key --hasher keccak --crs bn254_g2.dat
 echo "Proof verified"
 
 bb write_vk_ultra_keccak_honk -b $CIRCUIT -o target/verification_key_bb
