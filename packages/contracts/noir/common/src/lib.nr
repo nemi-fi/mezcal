@@ -1,4 +1,4 @@
-use bignum::BigNumTrait;
+use bignum::BigNum;
 use protocol_types::hash::poseidon2_hash_with_separator;
 
 mod context;

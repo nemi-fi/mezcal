@@ -1,3 +1,4 @@
+import type { CompiledCircuit } from "@noir-lang/noir_js";
 import { ethers } from "ethers";
 import { mapValues } from "lodash-es";
 import type { AsyncOrSync } from "ts-essentials";
@@ -42,11 +43,6 @@ export function createInterfaceSdk(
     poolErc20,
   };
 }
-
-export type CompiledCircuit = {
-  bytecode: string;
-  abi: any;
-};
 
 async function getCircuit(artifact: AsyncOrSync<CompiledCircuit>) {
   const { Noir } = await import("@noir-lang/noir_js");
