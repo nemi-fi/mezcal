@@ -33,13 +33,13 @@ impl Erc20Note {
     }
 }
 
-impl crate::Serialize<6> for Erc20Note {
-    fn serialize(self) -> [Field; 6] {
+impl crate::Serialize<4> for Erc20Note {
+    fn serialize(self) -> [Field; 4] {
         self
             .owner
             .serialize()
             .concat(self.amount.token.serialize())
-            .concat(self.amount.amount.limbs.map(|x| x.into()))
+            .concat([self.amount.amount.to_integer()])
             .concat([self.randomness])
     }
 }

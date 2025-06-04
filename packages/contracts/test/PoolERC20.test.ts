@@ -3,6 +3,7 @@ import { expect } from "chai";
 import { ethers, noir, typedDeployments } from "hardhat";
 import type { sdk as interfaceSdk } from "../sdk";
 import type { createBackendSdk } from "../sdk/backendSdk";
+import { SwapResult } from "../sdk/LobService";
 import { parseUnits, snapshottedBeforeEach } from "../shared/utils";
 import {
   MockERC20,
@@ -42,6 +43,10 @@ describe("PoolERC20", () => {
 
     await usdc.mintForTests(alice, await parseUnits(usdc, "1000000"));
     await usdc.connect(alice).approve(pool, ethers.MaxUint256);
+    await btc.mintForTests(bob, await parseUnits(btc, "1000000"));
+    await btc.connect(bob).approve(pool, ethers.MaxUint256);
+    await btc.mintForTests(charlie, await parseUnits(btc, "1000000"));
+    await btc.connect(charlie).approve(pool, ethers.MaxUint256);
 
     ({ CompleteWaAddress, TokenAmount } = (
       await tsImport("../sdk", __filename)
@@ -66,6 +71,7 @@ describe("PoolERC20", () => {
       unshield: noir.getCircuitJson("erc20_unshield"),
       join: noir.getCircuitJson("erc20_join"),
       transfer: noir.getCircuitJson("erc20_transfer"),
+      swap: noir.getCircuitJson("lob_router_swap"),
     });
 
     backendSdk = createBackendSdk(coreSdk, trees, {
@@ -369,5 +375,258 @@ describe("PoolERC20", () => {
     expect(
       await sdk.poolErc20.getBalanceNotesOf(usdc, aliceSecretKey),
     ).to.deep.equal([changeNote]);
+  });
+
+  it("swaps", async () => {
+    const { note: aliceNote } = await sdk.poolErc20.shield({
+      account: alice,
+      token: usdc,
+      amount: 100n,
+      secretKey: aliceSecretKey,
+    });
+    const { note: bobNote } = await sdk.poolErc20.shield({
+      account: bob,
+      token: btc,
+      amount: 10n,
+      secretKey: bobSecretKey,
+    });
+
+    await backendSdk.rollup.rollup();
+
+    await sdk.lob.swap({
+      sellerSecretKey: aliceSecretKey,
+      sellerNote: aliceNote,
+      sellerAmount: await TokenAmount.from({
+        token: await usdc.getAddress(),
+        amount: 70n,
+      }),
+      buyerSecretKey: bobSecretKey,
+      buyerNote: bobNote,
+      buyerAmount: await TokenAmount.from({
+        token: await btc.getAddress(),
+        amount: 2n,
+      }),
+    });
+
+    await backendSdk.rollup.rollup();
+
+    expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(30n);
+    expect(await sdk.poolErc20.balanceOf(btc, aliceSecretKey)).to.equal(2n);
+    expect(await sdk.poolErc20.balanceOf(usdc, bobSecretKey)).to.equal(70n);
+    expect(await sdk.poolErc20.balanceOf(btc, bobSecretKey)).to.equal(8n);
+  });
+
+  it("swaps mpc", async () => {
+    if (process.env.CI) {
+      // TODO: install co-noir on github actions and remove this
+      console.log("skipping mpc swap test");
+      return;
+    }
+
+    const { note: aliceNote } = await sdk.poolErc20.shield({
+      account: alice,
+      token: usdc,
+      amount: 100n,
+      secretKey: aliceSecretKey,
+    });
+    const { note: bobNote } = await sdk.poolErc20.shield({
+      account: bob,
+      token: btc,
+      amount: 10n,
+      secretKey: bobSecretKey,
+    });
+
+    await backendSdk.rollup.rollup();
+
+    const sellerAmount = await TokenAmount.from({
+      token: await usdc.getAddress(),
+      amount: 70n,
+    });
+    const buyerAmount = await TokenAmount.from({
+      token: await btc.getAddress(),
+      amount: 2n,
+    });
+
+    const swapAlicePromise = sdk.lob.requestSwap({
+      secretKey: aliceSecretKey,
+      note: aliceNote,
+      sellAmount: sellerAmount,
+      buyAmount: buyerAmount,
+    });
+    const swapBobPromise = sdk.lob.requestSwap({
+      secretKey: bobSecretKey,
+      note: bobNote,
+      sellAmount: buyerAmount,
+      buyAmount: sellerAmount,
+    });
+    const [swapAlice, swapBob] = await Promise.all([
+      swapAlicePromise,
+      swapBobPromise,
+    ]);
+    await sdk.lob.commitSwap({ swapA: swapAlice, swapB: swapBob });
+
+    await backendSdk.rollup.rollup();
+
+    expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(30n);
+    expect(await sdk.poolErc20.balanceOf(btc, aliceSecretKey)).to.equal(2n);
+    expect(await sdk.poolErc20.balanceOf(usdc, bobSecretKey)).to.equal(70n);
+    expect(await sdk.poolErc20.balanceOf(btc, bobSecretKey)).to.equal(8n);
+  });
+
+  it("swaps 4 orders", async () => {
+    if (process.env.CI) {
+      // TODO: install co-noir on github actions and remove this
+      return;
+    }
+
+    const { note: aliceNote0 } = await sdk.poolErc20.shield({
+      account: alice,
+      token: usdc,
+      amount: 100n,
+      secretKey: aliceSecretKey,
+    });
+    const { note: aliceNote1 } = await sdk.poolErc20.shield({
+      account: alice,
+      token: usdc,
+      amount: 100n,
+      secretKey: aliceSecretKey,
+    });
+    const { note: bobNote } = await sdk.poolErc20.shield({
+      account: bob,
+      token: btc,
+      amount: 10n,
+      secretKey: bobSecretKey,
+    });
+    const { note: charlieNote } = await sdk.poolErc20.shield({
+      account: charlie,
+      token: btc,
+      amount: 20n,
+      secretKey: charlieSecretKey,
+    });
+    await backendSdk.rollup.rollup();
+
+    let swaps0Promise: Promise<[SwapResult, SwapResult]>;
+    {
+      // alice <-> bob
+      const sellerAmount = await TokenAmount.from({
+        token: await usdc.getAddress(),
+        amount: 70n,
+      });
+      const buyerAmount = await TokenAmount.from({
+        token: await btc.getAddress(),
+        amount: 2n,
+      });
+      swaps0Promise = Promise.all([
+        sdk.lob.requestSwap({
+          secretKey: aliceSecretKey,
+          note: aliceNote0,
+          sellAmount: sellerAmount,
+          buyAmount: buyerAmount,
+        }),
+        sdk.lob.requestSwap({
+          secretKey: bobSecretKey,
+          note: bobNote,
+          sellAmount: buyerAmount,
+          buyAmount: sellerAmount,
+        }),
+      ]);
+    }
+
+    let swaps1Promise: Promise<[SwapResult, SwapResult]>;
+    {
+      // alice <-> charlie
+      const sellerAmount = await TokenAmount.from({
+        token: await usdc.getAddress(),
+        amount: 30n,
+      });
+      const buyerAmount = await TokenAmount.from({
+        token: await btc.getAddress(),
+        amount: 1n,
+      });
+      swaps1Promise = Promise.all([
+        sdk.lob.requestSwap({
+          secretKey: aliceSecretKey,
+          note: aliceNote1,
+          sellAmount: sellerAmount,
+          buyAmount: buyerAmount,
+        }),
+        sdk.lob.requestSwap({
+          secretKey: charlieSecretKey,
+          note: charlieNote,
+          sellAmount: buyerAmount,
+          buyAmount: sellerAmount,
+        }),
+      ]);
+    }
+
+    const swaps0 = await swaps0Promise;
+    const swaps1 = await swaps1Promise;
+    await sdk.lob.commitSwap({ swapA: swaps0[0], swapB: swaps0[1] });
+    await sdk.lob.commitSwap({ swapA: swaps1[0], swapB: swaps1[1] });
+    await backendSdk.rollup.rollup();
+
+    expect(await sdk.poolErc20.balanceOf(usdc, aliceSecretKey)).to.equal(
+      200n - 70n - 30n,
+    );
+    expect(await sdk.poolErc20.balanceOf(btc, aliceSecretKey)).to.equal(
+      2n + 1n,
+    );
+
+    expect(await sdk.poolErc20.balanceOf(usdc, bobSecretKey)).to.equal(70n);
+    expect(await sdk.poolErc20.balanceOf(btc, bobSecretKey)).to.equal(8n);
+
+    expect(await sdk.poolErc20.balanceOf(usdc, charlieSecretKey)).to.equal(30n);
+    expect(await sdk.poolErc20.balanceOf(btc, charlieSecretKey)).to.equal(19n);
+  });
+
+  // TODO: fix this test and re-enable. It never finishes because it does not throw if orders do no match anymore.
+  it.skip("fails to swap if order amounts do not match", async () => {
+    if (process.env.CI) {
+      // TODO: install co-noir on github actions and remove this
+      return;
+    }
+
+    const { note: aliceNote } = await sdk.poolErc20.shield({
+      account: alice,
+      token: usdc,
+      amount: 100n,
+      secretKey: aliceSecretKey,
+    });
+    const { note: bobNote } = await sdk.poolErc20.shield({
+      account: bob,
+      token: btc,
+      amount: 10n,
+      secretKey: bobSecretKey,
+    });
+
+    await backendSdk.rollup.rollup();
+
+    const sellerAmount = await TokenAmount.from({
+      token: await usdc.getAddress(),
+      amount: 70n,
+    });
+    const buyerAmount = await TokenAmount.from({
+      token: await btc.getAddress(),
+      amount: 2n,
+    });
+
+    const swapAlicePromise = sdk.lob.requestSwap({
+      secretKey: aliceSecretKey,
+      note: aliceNote,
+      sellAmount: sellerAmount,
+      buyAmount: buyerAmount,
+    });
+    const swapBobPromise = sdk.lob.requestSwap({
+      secretKey: bobSecretKey,
+      note: bobNote,
+      sellAmount: buyerAmount,
+      buyAmount: await TokenAmount.from({
+        token: await usdc.getAddress(),
+        amount: 71n, // amount differs
+      }),
+    });
+    await expect(
+      Promise.all([swapAlicePromise, swapBobPromise]),
+    ).to.be.rejectedWith("mpc generated invalid proof");
   });
 });

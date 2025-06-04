@@ -89,10 +89,11 @@ library PublicInputs {
         Type memory publicInputs,
         uint256 value
     ) internal pure {
-        uint256[U256_LIMBS] memory limbs = toNoirU256(value);
-        for (uint256 i = 0; i < limbs.length; i++) {
-            push(publicInputs, limbs[i]);
-        }
+        push(publicInputs, value);
+        // uint256[U256_LIMBS] memory limbs = toNoirU256(value);
+        // for (uint256 i = 0; i < limbs.length; i++) {
+        //     push(publicInputs, limbs[i]);
+        // }
     }
 
     function finish(

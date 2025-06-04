@@ -1,0 +1,8 @@
+[package]
+name = "lob_router"
+type = "lib"
+authors = ["Oleh Misarosh <olehmisar@gmail.com>"]
+
+[dependencies]
+common = { path = "../common" }
+erc20 = { path = "../erc20" }

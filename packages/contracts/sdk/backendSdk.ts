@@ -24,7 +24,7 @@ export function createBackendSdk(
             `${process.env.HOME}/.bb/bb`,
             circuit,
           ) as unknown as UltraHonkBackend);
-      return { noir, backend };
+      return { circuit, noir, backend };
     }),
   });
   return {

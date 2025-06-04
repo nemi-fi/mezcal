@@ -5,6 +5,8 @@ members = [
   "erc20_unshield",
   "erc20_join",
   "erc20_transfer",
+  "lob_router",
+  "lob_router_swap",
   "rollup",
   "common",
 ]
