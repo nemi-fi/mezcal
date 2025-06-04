@@ -15,7 +15,8 @@ export class NonMembershipTree {
       "@aztec/merkle-tree"
     );
     const { NullifierLeaf, NullifierLeafPreimage } = await import(
-      "@aztec/circuits.js"
+      // @ts-ignore hardhat does not support ESM
+      "@aztec/stdlib/trees"
     );
     // @ts-ignore hardhat does not support ESM
     const { AztecLmdbStore } = await import("@aztec/kv-store/lmdb");
@@ -96,7 +97,7 @@ export class NonMembershipTree {
         leaf_index: bigIntToString(lowLeafIndex),
         sibling_path: lowLeafSiblingPath
           .toFields()
-          .map((x) => bigIntToString(x.toBigInt())),
+          .map((x: Fr) => bigIntToString(x.toBigInt())),
       },
     };
     return witness;

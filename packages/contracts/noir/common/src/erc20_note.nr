@@ -1,7 +1,6 @@
 // fails to compile if this file is moved to erc20 crate
 
 use super::note::Note;
-use nodash::ArrayExtensions;
 use protocol_types::traits::Serialize;
 
 pub struct Erc20Note {

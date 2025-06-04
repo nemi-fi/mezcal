@@ -1,10 +1,11 @@
 import { UltraHonkBackend } from "@aztec/bb.js";
+import type { CompiledCircuit } from "@noir-lang/noir_js";
 import { utils } from "@repo/utils";
 import os from "node:os";
 import type { AsyncOrSync } from "ts-essentials";
 import { NativeUltraHonkBackend } from "./NativeUltraHonkBackend";
 import { RollupService } from "./RollupOnlyService";
-import { type CompiledCircuit, createCoreSdk } from "./sdk";
+import { createCoreSdk } from "./sdk";
 import type { TreesService } from "./TreesService";
 
 export function createBackendSdk(

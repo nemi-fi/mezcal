@@ -1,4 +1,6 @@
 mod LobRouter {
+    use common::OwnedNote;
+
     pub fn swap(
         context: &mut common::Context,
         seller_secret_key: Field,
