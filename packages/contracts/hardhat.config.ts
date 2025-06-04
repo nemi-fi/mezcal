@@ -1,6 +1,6 @@
 import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-deploy";
-import "hardhat-plugin-noir";
+import "hardhat-noir";
 import { HardhatUserConfig } from "hardhat/config";
 import envConfig from "./envConfig";
 import "./shared/typed-hardhat-deploy";
@@ -16,7 +16,7 @@ const config: HardhatUserConfig = {
     },
   },
   noir: {
-    version: "1.0.0-beta.3",
+    version: "1.0.0-beta.5",
   },
   networks: {},
   etherscan: {

@@ -1,9 +1,11 @@
 import type { ProofData } from "@aztec/bb.js";
 import type { CompiledCircuit } from "@noir-lang/noir_js";
+import { chunk } from "lodash-es";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { decodeNativeHonkProof } from "./utils.js";
+import { Hex } from "ox";
+import { assert } from "ts-essentials";
 
 export class NativeUltraHonkBackend {
   constructor(
@@ -32,13 +34,17 @@ export class NativeUltraHonkBackend {
     fs.writeFileSync(circuitJsonPath, JSON.stringify(this.circuit));
     fs.writeFileSync(witnessOutputPath, witness);
     const args = [
-      "prove_ultra_keccak_honk",
+      "prove",
+      "--scheme",
+      "ultra_honk",
       "-b",
       circuitJsonPath,
       "-w",
       witnessOutputPath,
       "-o",
       proofOutputPath,
+      "--oracle_hash",
+      "keccak",
     ];
 
     const bbProcess = spawn(this.bbPath, args);
@@ -57,10 +63,21 @@ export class NativeUltraHonkBackend {
           return;
         }
 
-        const proofData = decodeNativeHonkProof(
-          fs.readFileSync(proofOutputPath),
+        const proof = fs.readFileSync(path.join(proofOutputPath, "proof"));
+        const publicInputs = fs.readFileSync(
+          path.join(proofOutputPath, "public_inputs"),
         );
-        resolve(proofData);
+        assert(
+          publicInputs.length % 32 === 0,
+          "publicInputs length must be divisible by 32",
+        );
+        resolve({
+          proof,
+          // TODO: not sure if this publicInputs decoding is correct
+          publicInputs: chunk(Array.from(publicInputs), 32).map((x) =>
+            Hex.fromBytes(Uint8Array.from(x)),
+          ),
+        });
       });
 
       bbProcess.on("error", (err) => {

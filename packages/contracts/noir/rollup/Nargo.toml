@@ -4,5 +4,5 @@ type = "bin"
 authors = ["Oleh Misarosh <olehmisar@gmail.com"]
 
 [dependencies]
-protocol_types = { git = "https://github.com/AztecProtocol/aztec-packages/", tag = "v0.80.0", directory = "noir-projects/noir-protocol-circuits/crates/types" }
+protocol_types = { git = "https://github.com/AztecProtocol/aztec-packages/", tag = "v0.86.0", directory = "noir-projects/noir-protocol-circuits/crates/types" }
 common = { path = "../common" }
