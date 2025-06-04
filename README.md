@@ -6,6 +6,12 @@ Mezcal (Nahuatl: mexcalli - agave booze) - on-chain dark pool implementation usi
 
 The code is highly experimental. The core code is located in `packages/contracts`.
 
+## Install coSnarks
+
+```sh
+cargo install --git https://github.com/TaceoLabs/co-snarks co-noir --rev 1b2db005ee550c028af824b3ec4e811d6e8a3705
+```
+
 ## TODO
 
 ### contracts and circuits
