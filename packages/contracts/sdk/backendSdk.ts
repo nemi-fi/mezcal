@@ -4,7 +4,7 @@ import { utils } from "@repo/utils";
 import os from "node:os";
 import type { AsyncOrSync } from "ts-essentials";
 import { NativeUltraHonkBackend } from "./NativeUltraHonkBackend";
-import { RollupService } from "./RollupOnlyService";
+import { RollupService } from "./RollupService";
 import { createCoreSdk } from "./sdk";
 import type { TreesService } from "./TreesService";
 
