@@ -1,6 +1,6 @@
 import type { Fr } from "@aztec/aztec.js";
 import type { UltraHonkBackend } from "@aztec/bb.js";
-import type { Noir } from "@noir-lang/noir_js";
+import type { CompiledCircuit, Noir } from "@noir-lang/noir_js";
 import { utils } from "@repo/utils";
 import { ethers } from "ethers";
 import { compact, orderBy, times } from "lodash-es";
@@ -8,7 +8,7 @@ import { assert, type AsyncOrSync } from "ts-essentials";
 import { type PoolERC20 } from "../typechain-types";
 import { EncryptionService } from "./EncryptionService";
 import type { ITreesService } from "./RemoteTreesService";
-import { fromNoirU256, prove, toNoirU256, U256_LIMBS } from "./utils.js";
+import { prove, toNoirU256 } from "./utils.js";
 
 // Note: keep in sync with other languages
 export const NOTE_HASH_TREE_HEIGHT = 40;
@@ -368,7 +368,8 @@ export class Erc20Note {
     return [
       BigInt(this.owner.address),
       BigInt(this.amount.token),
-      ...amount.amount.limbs.map((x) => BigInt(x)),
+      // ...amount.amount.limbs.map((x) => BigInt(x)),
+      BigInt(amount.amount.value),
       BigInt(this.randomness),
     ];
   }
@@ -385,9 +386,10 @@ export class Erc20Note {
       ),
       amount: await TokenAmount.from({
         token: ethers.zeroPadValue(fieldsStr[1]!, 20),
-        amount: fromNoirU256({ limbs: fields.slice(2, 2 + U256_LIMBS) }),
+        // amount: fromNoirU256({ limbs: fields.slice(2, 2 + U256_LIMBS) }),
+        amount: ethers.toBigInt(fieldsStr[2]!),
       }),
-      randomness: ethers.zeroPadValue(fieldsStr[2 + U256_LIMBS]!, 32),
+      randomness: ethers.zeroPadValue(fieldsStr[3]!, 32),
     });
   }
 
@@ -523,6 +525,7 @@ export class CompleteWaAddress {
 }
 
 export type NoirAndBackend = {
+  circuit: CompiledCircuit;
   noir: Noir;
   backend: UltraHonkBackend;
 };
