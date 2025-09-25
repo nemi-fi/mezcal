@@ -28,6 +28,7 @@ export class NativeUltraHonkBackend {
       targetDir,
       `${circuitHash}_${witnessHash}_proof`,
     );
+    fs.mkdirSync(proofOutputPath, { recursive: true });
 
     fs.writeFileSync(circuitJsonPath, JSON.stringify(this.circuit));
     fs.writeFileSync(witnessOutputPath, witness);
@@ -54,7 +55,7 @@ export class NativeUltraHonkBackend {
       console.error(`stderr: ${data}`);
     });
 
-    return await new Promise<ProofData>((resolve, reject) => {
+    const promise = new Promise<ProofData>((resolve, reject) => {
       bbProcess.on("close", (code: number) => {
         if (code !== 0) {
           reject(new Error(`Process exited with code ${code}`));
@@ -67,6 +68,12 @@ export class NativeUltraHonkBackend {
         reject(new Error(`Failed to start process: ${err.message}`));
       });
     });
+    try {
+      return await promise;
+    } finally {
+      fs.rmSync(proofOutputPath, { recursive: true });
+      fs.rmSync(witnessOutputPath, { recursive: true });
+    }
   }
 
   async #getCircuitHash() {
