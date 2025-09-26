@@ -99,3 +99,17 @@ impl std::ops::Sub for TokenAmount {
 pub struct TreeRoots {
     pub note_hash_root: Field,
 }
+
+mod tests {
+    #[test]
+    fn test_constants() {
+        assert_eq(
+            crate::MAX_NULLIFIERS_PER_ROLLUP,
+            (2 as Field).pow_32(crate::NULLIFIER_SUBTREE_HEIGHT as Field) as u32,
+        );
+        assert_eq(
+            crate::MAX_NOTES_PER_ROLLUP,
+            (2 as Field).pow_32(crate::NOTE_HASH_SUBTREE_HEIGHT as Field) as u32,
+        );
+    }
+}
