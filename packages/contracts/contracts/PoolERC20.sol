@@ -20,6 +20,7 @@ contract PoolERC20 is PoolGeneric {
         IVerifier unshieldVerifier;
         IVerifier joinVerifier;
         IVerifier transferVerifier;
+        IVerifier swapVerifier;
     }
 
     constructor(
@@ -27,12 +28,14 @@ contract PoolERC20 is PoolGeneric {
         IVerifier unshieldVerifier,
         IVerifier joinVerifier,
         IVerifier transferVerifier,
+        IVerifier swapVerifier,
         IVerifier rollupVerifier
     ) PoolGeneric(rollupVerifier) {
         _poolErc20Storage().shieldVerifier = shieldVerifier;
         _poolErc20Storage().unshieldVerifier = unshieldVerifier;
         _poolErc20Storage().joinVerifier = joinVerifier;
         _poolErc20Storage().transferVerifier = transferVerifier;
+        _poolErc20Storage().swapVerifier = swapVerifier;
     }
 
     function shield(
@@ -43,7 +46,7 @@ contract PoolERC20 is PoolGeneric {
     ) external {
         token.safeTransferFrom(msg.sender, address(this), amount);
 
-        PublicInputs.Type memory pi = PublicInputs.create(1 + 2 + U256_LIMBS);
+        PublicInputs.Type memory pi = PublicInputs.create(1 + 2 + 1);
         pi.push(getNoteHashTree().root);
         pi.push(address(token));
         pi.pushUint256Limbs(amount);
@@ -73,7 +76,7 @@ contract PoolERC20 is PoolGeneric {
         // TODO(security): bring back unshield. It was removed because nullifiers are no longer checked on tx level. Only when the tx is rolled up.
         require(false, "not implemented");
 
-        PublicInputs.Type memory pi = PublicInputs.create(6 + U256_LIMBS);
+        PublicInputs.Type memory pi = PublicInputs.create(6 + 1);
         // params
         pi.push(getNoteHashTree().root);
         pi.push(getNullifierTree().root);
@@ -152,6 +155,39 @@ contract PoolERC20 is PoolGeneric {
             bytes32[] memory nullifiers = new bytes32[](1);
             nullifiers[0] = nullifier;
             _PoolGeneric_addPendingTx(noteInputs, nullifiers);
+        }
+    }
+
+    // TODO: move to a separate contract
+    function swap(
+        bytes calldata proof,
+        NoteInput[4] calldata notes,
+        bytes32[2] calldata nullifiers
+    ) external {
+        PublicInputs.Type memory pi = PublicInputs.create(1 + 6);
+        pi.push(getNoteHashTree().root);
+        pi.push(notes[0].noteHash);
+        pi.push(notes[1].noteHash);
+        pi.push(notes[2].noteHash);
+        pi.push(notes[3].noteHash);
+        pi.push(nullifiers[0]);
+        pi.push(nullifiers[1]);
+        require(
+            _poolErc20Storage().swapVerifier.verify(proof, pi.finish()),
+            "Invalid swap proof"
+        );
+
+        {
+            NoteInput[] memory noteInputs = new NoteInput[](4);
+            noteInputs[0] = notes[0];
+            noteInputs[1] = notes[1];
+            noteInputs[2] = notes[2];
+            noteInputs[3] = notes[3];
+            bytes32[] memory nullifiersDyn = new bytes32[](nullifiers.length);
+            for (uint256 i = 0; i < nullifiers.length; i++) {
+                nullifiersDyn[i] = nullifiers[i];
+            }
+            _PoolGeneric_addPendingTx(noteInputs, nullifiersDyn);
         }
     }
 

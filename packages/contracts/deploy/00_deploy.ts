@@ -34,6 +34,10 @@ const deploy: DeployFunction = async ({
     "Erc20TransferVerifier",
     "erc20_transfer",
   );
+  const swapVerifier = await deployVerifier(
+    "LobRouterSwapVerifier",
+    "lob_router_swap",
+  );
   const rollupVerifier = await deployVerifier("RollupVerifier", "rollup");
 
   const pool = await typedDeployments.deploy("PoolERC20", {
@@ -44,6 +48,7 @@ const deploy: DeployFunction = async ({
       unshieldVerifier.address,
       joinVerifier.address,
       transferVerifier.address,
+      swapVerifier.address,
       rollupVerifier.address,
     ],
   });

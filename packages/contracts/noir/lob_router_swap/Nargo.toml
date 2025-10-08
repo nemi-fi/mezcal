@@ -1,0 +1,9 @@
+[package]
+name = "lob_router_swap"
+type = "bin"
+authors = ["Oleh Misarosh <olehmisar@gmail.com"]
+
+[dependencies]
+common = { path = "../common" }
+lob_router = { path = "../lob_router" }
+erc20 = { path = "../erc20" }
